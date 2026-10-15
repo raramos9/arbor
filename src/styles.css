@@ -1,0 +1,163 @@
+:root {
+  --bg: #f6f6f4;
+  --panel: #ffffff;
+  --border: #d8d8d2;
+  --text: #1c1c1a;
+  --muted: #74746c;
+  --accent: #2f5fd0;
+  --danger: #b3261e;
+  --position: #e3ecff;
+  --position-border: #2f5fd0;
+  --technique: #fff6dc;
+  --technique-border: #b58a12;
+  --submission: #ffe3e0;
+  --submission-border: #b3261e;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; margin: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.4 system-ui, -apple-system, sans-serif;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+h1, h2 { margin: 0; }
+h1 { font-size: 16px; }
+h2 { font-size: 15px; }
+
+.muted { color: var(--muted); margin: 0; }
+.error { color: var(--danger); margin: 0; }
+
+button, input, select, textarea { font: inherit; }
+
+button {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  cursor: pointer;
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.danger { color: var(--danger); }
+
+input, select, textarea {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+.page { display: flex; flex-direction: column; height: 100%; }
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.form { display: flex; flex-direction: column; gap: 12px; }
+.form label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; }
+.form label > input, .form label > select, .form label > textarea { font-weight: 400; }
+.row { display: flex; gap: 8px; justify-content: flex-end; }
+
+.list-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 32px;
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+.list-layout section { display: flex; flex-direction: column; gap: 12px; }
+
+.strategy-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.strategy-list a {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+}
+.strategy-list a:hover { border-color: var(--accent); text-decoration: none; }
+.strategy-list .corrupt a { border-color: var(--danger); }
+
+.notice { max-width: 560px; margin: 48px auto; padding: 0 16px; display: flex; flex-direction: column; gap: 8px; }
+
+.editor { flex: 1; display: flex; min-height: 0; }
+.canvas { flex: 1; position: relative; min-width: 0; }
+.toolbar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 5;
+  display: flex;
+  gap: 8px;
+}
+
+.inspector {
+  width: 300px;
+  padding: 16px;
+  border-left: 1px solid var(--border);
+  background: var(--panel);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.node {
+  min-width: 140px;
+  max-width: 220px;
+  padding: 8px 12px;
+  border: 2px solid;
+  border-radius: 8px;
+  background: var(--panel);
+}
+.node-position { background: var(--position); border-color: var(--position-border); border-radius: 18px; }
+.node-technique { background: var(--technique); border-color: var(--technique-border); }
+.node-submission { background: var(--submission); border-color: var(--submission-border); border-style: double; border-width: 4px; }
+.node.root { box-shadow: 0 0 0 3px rgba(47, 95, 208, 0.35); }
+.node.selected { outline: 2px solid var(--text); outline-offset: 2px; }
+.node-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.root-badge { font-weight: 700; color: var(--position-border); }
+.node-name { font-weight: 600; overflow-wrap: anywhere; }
+
+.react-flow__edge.edge-opponent .react-flow__edge-path { stroke-dasharray: 6 4; }
+.react-flow__edge-text { font-size: 12px; }
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 20;
+}
+.dialog {
+  width: 340px;
+  padding: 16px;
+  border-radius: 10px;
+  background: var(--panel);
+}
