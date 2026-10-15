@@ -1,6 +1,8 @@
+import { parseLibrary, type LibraryTechnique } from './model/library';
 import { parseStrategy, type Result, type StrategyDoc } from './model/strategy';
 
 const PREFIX = 'arbor.strategy.';
+const LIBRARY_KEY = 'arbor.library';
 
 export type StoredStrategy =
 	| { ok: true; id: string; doc: StrategyDoc }
@@ -47,6 +49,33 @@ export function loadStrategy(id: string): Result<StrategyDoc> {
 export function saveStrategy(doc: StrategyDoc): Result<null> {
 	try {
 		localStorage.setItem(PREFIX + doc.id, JSON.stringify(doc));
+		return { ok: true, value: null };
+	} catch (e) {
+		return { ok: false, error: `Could not save: ${describe(e)}` };
+	}
+}
+
+export function loadMyLibrary(): Result<LibraryTechnique[]> {
+	let raw: string | null;
+	try {
+		raw = localStorage.getItem(LIBRARY_KEY);
+	} catch (e) {
+		return { ok: false, error: `Storage is unavailable: ${describe(e)}` };
+	}
+	if (raw === null) return { ok: true, value: [] };
+	let json: unknown;
+	try {
+		json = JSON.parse(raw);
+	} catch (e) {
+		return { ok: false, error: `Your library is not valid JSON: ${describe(e)}` };
+	}
+	const parsed = parseLibrary(json);
+	return parsed.ok ? parsed : { ok: false, error: `Your library is corrupt: ${parsed.error}` };
+}
+
+export function saveMyLibrary(list: readonly LibraryTechnique[]): Result<null> {
+	try {
+		localStorage.setItem(LIBRARY_KEY, JSON.stringify(list));
 		return { ok: true, value: null };
 	} catch (e) {
 		return { ok: false, error: `Could not save: ${describe(e)}` };
