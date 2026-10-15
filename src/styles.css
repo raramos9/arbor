@@ -238,3 +238,8 @@ input, select, textarea {
 .library-results section { display: flex; flex-direction: column; gap: 4px; }
 .library-results h3 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 .library-row { text-align: left; }
+.library-entry { display: flex; align-items: center; gap: 6px; }
+.library-entry .library-row { flex: 1; min-width: 0; }
+.library-tag { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.library-confirm { flex: 1; font-weight: 600; overflow-wrap: anywhere; }
+.library-results > button { align-self: flex-start; }
