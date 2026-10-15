@@ -232,3 +232,9 @@ input, select, textarea {
   color: #fff;
   font-size: 12px;
 }
+
+.library-dialog { width: 420px; max-width: calc(100vw - 32px); }
+.library-results { max-height: 50vh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.library-results section { display: flex; flex-direction: column; gap: 4px; }
+.library-results h3 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.library-row { text-align: left; }

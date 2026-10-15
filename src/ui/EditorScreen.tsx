@@ -9,9 +9,11 @@ import {
 	type NodeChange,
 } from '@xyflow/react';
 import type { ApplyResult, Command } from '../model/commands';
+import type { LibraryTechnique } from '../model/library';
 import {
 	newEdgeId,
 	newNodeId,
+	type NodeId,
 	type NodeKind,
 	type StrategyDoc,
 	type StrategyNode,
@@ -30,6 +32,7 @@ import {
 	type StrategyFlowNode,
 } from './flow';
 import { Inspector } from './Inspector';
+import { LibraryDialog } from './LibraryDialog';
 import { StrategyNodeView } from './StrategyNodeView';
 import { useEditor } from './useEditor';
 
@@ -76,6 +79,7 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 	const [error, setError] = useState<string | null>(null);
 	const [focusName, setFocusName] = useState(false);
 	const [pending, setPending] = useState<Pending | null>(null);
+	const [pickingLibrary, setPickingLibrary] = useState(false);
 	const [measured, setMeasured] = useState<Record<string, Size>>({});
 
 	const nodes = useMemo(() => toFlowNodes(doc, selection, measured), [doc, selection, measured]);
@@ -108,9 +112,12 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 	const pendingRef = useRef(pending);
 	pendingRef.current = pending;
 
+	const pickingLibraryRef = useRef(pickingLibrary);
+	pickingLibraryRef.current = pickingLibrary;
+
 	useEffect(() => {
 		const onKey = (e: KeyboardEvent) => {
-			if (pendingRef.current) return;
+			if (pendingRef.current || pickingLibraryRef.current) return;
 			if (e.key !== 'Delete' && e.key !== 'Backspace') return;
 			if (isEditable(e.target)) return;
 			e.preventDefault();
@@ -120,7 +127,7 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 		return () => window.removeEventListener('keydown', onKey);
 	}, []);
 
-	function addNode(kind: NodeKind) {
+	function placeNode(create: (id: NodeId, at: Point) => Command) {
 		const selected = selection?.type === 'node' ? nodes.find((n) => n.id === selection.id) : undefined;
 		let candidate: Point;
 		if (selected) {
@@ -142,18 +149,21 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 			})),
 		);
 		const nodeId = newNodeId();
-		const result = exec({
-			type: 'addNode',
-			id: nodeId,
-			kind,
-			name: `New ${kind}`,
-			at,
-		});
+		const result = exec(create(nodeId, at));
 		if (result.ok) {
 			setSelection({ type: 'node', id: nodeId });
 			setFocusName(true);
 			revealNode(at);
 		}
+	}
+
+	function addNode(kind: NodeKind) {
+		placeNode((id, at) => ({ type: 'addNode', id, kind, name: `New ${kind}`, at }));
+	}
+
+	function addLibraryNode(technique: LibraryTechnique) {
+		setPickingLibrary(false);
+		placeNode((id, at) => ({ type: 'addLibraryNode', id, technique, at }));
 	}
 
 	function revealNode(at: Point) {
@@ -217,6 +227,7 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 								Add {kind}
 							</button>
 						))}
+						<button onClick={() => setPickingLibrary(true)}>From library</button>
 					</div>
 					<ReactFlow
 						nodes={nodes}
@@ -253,6 +264,9 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 					onDeleted={() => select(null)}
 				/>
 			</div>
+			{pickingLibrary && (
+				<LibraryDialog onPick={addLibraryNode} onCancel={() => setPickingLibrary(false)} />
+			)}
 			{pending && (
 				<ConnectDialog
 					from={pending.from}

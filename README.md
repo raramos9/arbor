@@ -12,6 +12,7 @@ What works today:
 
 - Create a strategy with a starting position, a ruleset (gi, no-gi, or both), and a starting side (top, bottom, or standing).
 - Add positions, techniques, and submissions to a canvas you can pan and zoom.
+- Pick a technique from a small seed library, or make your own. A picked technique copies its kind, name, and description into a new node, so later library changes never alter your strategy.
 - Connect nodes. Every connection says who moves: you, or your opponent. An opponent connection needs a label that describes the reaction.
 - Edit names, kinds, and plain-text notes in the side panel. Drag nodes to arrange them. Delete nodes and connections.
 - Attach media to any node or connection. YouTube links show a thumbnail and play in the side panel, starting at the link's timestamp. Instagram and other links open in a new tab.
@@ -45,6 +46,7 @@ Loading a strategy runs it through a [zod](https://zod.dev) schema and a few rul
 ## Project layout
 
 - `src/model/strategy.ts` defines the strategy schema and types, the load-time checks, and `createStrategy`.
+- `src/model/library.json` is the seed technique library. `src/model/library.ts` checks it on load and searches it.
 - `src/model/commands.ts` defines every edit as a command. `apply` is the only function that changes a strategy, and it explains any change it refuses.
 - `src/storage.ts` saves and loads strategies in `localStorage`.
 - `src/ui/` holds the list screen, the editor, and the side panel. `src/ui/flow.ts` is the only file that converts between a strategy and the node and edge lists React Flow expects.
@@ -62,9 +64,8 @@ There is no backend yet. Postgres and accounts arrive when strategies need to le
 
 The first milestone finishes the single-user experience:
 
-1. Pick techniques from a small seed library, alongside creating your own.
-2. Study mode: walk a strategy one decision at a time, choosing your options and your opponent's reactions.
-3. Export and import strategies as JSON files.
+1. Study mode: walk a strategy one decision at a time, choosing your options and your opponent's reactions.
+2. Export and import strategies as JSON files.
 
 After that:
 
