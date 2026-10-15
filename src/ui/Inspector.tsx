@@ -7,6 +7,7 @@ import {
 } from '../model/strategy';
 import { Field, SelectField } from './Field';
 import type { Selection } from './flow';
+import { MediaList } from './MediaList';
 
 const ACTORS: readonly ['me', 'opponent'] = ['me', 'opponent'];
 
@@ -52,6 +53,7 @@ export function Inspector({ doc, selection, error, focusName, exec, onDeleted }:
 						value={node.notes}
 						onChange={(notes) => exec({ type: 'updateNode', id: node.id, patch: { notes } })}
 					/>
+					<MediaList owner={{ type: 'node', id: node.id }} media={node.media} exec={exec} />
 					{node.kind === 'position' &&
 						(node.id === doc.rootNodeId ? (
 							<p className="muted">This is the start of the strategy.</p>
@@ -92,6 +94,7 @@ export function Inspector({ doc, selection, error, focusName, exec, onDeleted }:
 						value={edge.notes}
 						onChange={(notes) => exec({ type: 'updateEdge', id: edge.id, patch: { notes } })}
 					/>
+					<MediaList owner={{ type: 'edge', id: edge.id }} media={edge.media} exec={exec} />
 					<button className="danger" onClick={() => remove({ type: 'deleteEdge', id: edge.id })}>
 						Delete edge
 					</button>

@@ -1,6 +1,7 @@
 import {
 	parseReaction,
 	type EdgeId,
+	type Media,
 	type NodeId,
 	type NodeKind,
 	type Reaction,
@@ -12,6 +13,8 @@ import {
 } from './strategy';
 
 export type EdgeActor = StrategyEdge['actor'];
+
+export type MediaOwner = { type: 'node'; id: NodeId } | { type: 'edge'; id: EdgeId };
 
 export type Command =
 	| { type: 'addNode'; id: NodeId; kind: NodeKind; name: string; at?: { x: number; y: number } }
@@ -32,6 +35,9 @@ export type Command =
 	| { type: 'deleteEdge'; id: EdgeId }
 	| { type: 'moveNode'; id: NodeId; at: { x: number; y: number } }
 	| { type: 'setRoot'; id: NodeId }
+	| { type: 'addMedia'; owner: MediaOwner; media: Media }
+	| { type: 'updateMediaTitle'; owner: MediaOwner; index: number; title: string }
+	| { type: 'removeMedia'; owner: MediaOwner; index: number }
 	| {
 			type: 'updateMeta';
 			patch: { title?: string; description?: string; ruleset?: Ruleset; startingSide?: Side };
@@ -51,6 +57,24 @@ function omit<V>(record: Record<string, V>, key: string): Record<string, V> {
 
 function stamp(doc: StrategyDoc): StrategyDoc {
 	return { ...doc, updatedAt: new Date().toISOString() };
+}
+
+function ownerMedia(doc: StrategyDoc, owner: MediaOwner): readonly Media[] | null {
+	const target = owner.type === 'node' ? doc.nodes[owner.id] : doc.edges[owner.id];
+	return target ? target.media : null;
+}
+
+function withMedia(doc: StrategyDoc, owner: MediaOwner, media: Media[]): StrategyDoc {
+	if (owner.type === 'node') {
+		const node = doc.nodes[owner.id];
+		return node ? stamp({ ...doc, nodes: { ...doc.nodes, [owner.id]: { ...node, media } } }) : doc;
+	}
+	const edge = doc.edges[owner.id];
+	return edge ? stamp({ ...doc, edges: { ...doc.edges, [owner.id]: { ...edge, media } } }) : doc;
+}
+
+function inRange(list: readonly unknown[], index: number): boolean {
+	return Number.isInteger(index) && index >= 0 && index < list.length;
 }
 
 export function apply(doc: StrategyDoc, cmd: Command): ApplyResult {
@@ -152,6 +176,24 @@ export function apply(doc: StrategyDoc, cmd: Command): ApplyResult {
 			if (!node) return refuse('That node does not exist.');
 			if (node.kind !== 'position') return refuse('Only a position can be the start.');
 			return { ok: true, doc: stamp({ ...doc, rootNodeId: cmd.id }) };
+		}
+		case 'addMedia': {
+			const current = ownerMedia(doc, cmd.owner);
+			if (!current) return refuse(`That ${cmd.owner.type} does not exist.`);
+			return { ok: true, doc: withMedia(doc, cmd.owner, [...current, cmd.media]) };
+		}
+		case 'updateMediaTitle': {
+			const current = ownerMedia(doc, cmd.owner);
+			if (!current) return refuse(`That ${cmd.owner.type} does not exist.`);
+			if (!inRange(current, cmd.index)) return refuse('That media item does not exist.');
+			const next = current.map((item, i) => (i === cmd.index ? { ...item, title: cmd.title } : item));
+			return { ok: true, doc: withMedia(doc, cmd.owner, next) };
+		}
+		case 'removeMedia': {
+			const current = ownerMedia(doc, cmd.owner);
+			if (!current) return refuse(`That ${cmd.owner.type} does not exist.`);
+			if (!inRange(current, cmd.index)) return refuse('That media item does not exist.');
+			return { ok: true, doc: withMedia(doc, cmd.owner, current.filter((_, i) => i !== cmd.index)) };
 		}
 		case 'updateMeta':
 			return {

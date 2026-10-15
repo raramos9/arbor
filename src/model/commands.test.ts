@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { apply, defaultActor, type ApplyResult, type Command } from './commands';
+import { apply, defaultActor, type ApplyResult, type Command, type MediaOwner } from './commands';
 import { armDragDoc } from './fixtures';
 import {
 	EdgeIdSchema,
@@ -7,6 +7,7 @@ import {
 	parseReaction,
 	parseStrategy,
 	type EdgeId,
+	type Media,
 	type NodeId,
 	type StrategyDoc,
 } from './strategy';
@@ -201,5 +202,54 @@ describe('updateMeta', () => {
 	it('updates only the given fields', () => {
 		const doc = ok(armDragDoc(), { type: 'updateMeta', patch: { title: 'New', ruleset: 'gi', startingSide: 'top' } });
 		expect(doc).toMatchObject({ title: 'New', ruleset: 'gi', startingSide: 'top', description: '' });
+	});
+});
+
+describe('media commands', () => {
+	const link: Media = { provider: 'web', title: '', url: 'https://example.com' };
+	const second: Media = { provider: 'web', title: 'Second', url: 'https://example.org' };
+	const onNode: MediaOwner = { type: 'node', id: nid('arm-drag') };
+	const onEdge: MediaOwner = { type: 'edge', id: eid('e2') };
+
+	it('appends media to a node and an edge', () => {
+		let doc = ok(armDragDoc(), { type: 'addMedia', owner: onNode, media: link });
+		doc = ok(doc, { type: 'addMedia', owner: onNode, media: second });
+		doc = ok(doc, { type: 'addMedia', owner: onEdge, media: link });
+		expect(doc.nodes[nid('arm-drag')]?.media).toEqual([link, second]);
+		expect(doc.edges[eid('e2')]?.media).toEqual([link]);
+		expect(doc.edges[eid('e3')]?.media).toEqual([]);
+	});
+	it('refuses addMedia for an unknown owner', () => {
+		refused(armDragDoc(), { type: 'addMedia', owner: { type: 'node', id: nid('ghost') }, media: link });
+		refused(armDragDoc(), { type: 'addMedia', owner: { type: 'edge', id: eid('ghost') }, media: link });
+	});
+	it('does not mix up node and edge ids', () => {
+		refused(armDragDoc(), { type: 'addMedia', owner: { type: 'edge', id: eid('arm-drag') }, media: link });
+	});
+	it('retitles one item and keeps the rest', () => {
+		let doc = ok(armDragDoc(), { type: 'addMedia', owner: onEdge, media: link });
+		doc = ok(doc, { type: 'addMedia', owner: onEdge, media: second });
+		doc = ok(doc, { type: 'updateMediaTitle', owner: onEdge, index: 0, title: 'Drill' });
+		expect(doc.edges[eid('e2')]?.media).toEqual([{ ...link, title: 'Drill' }, second]);
+		expect(doc.edges[eid('e2')]?.actor).toBe('opponent');
+	});
+	it('refuses updateMediaTitle for an unknown owner or bad index', () => {
+		const doc = ok(armDragDoc(), { type: 'addMedia', owner: onNode, media: link });
+		refused(doc, { type: 'updateMediaTitle', owner: { type: 'node', id: nid('ghost') }, index: 0, title: 'x' });
+		refused(doc, { type: 'updateMediaTitle', owner: onNode, index: 1, title: 'x' });
+		refused(doc, { type: 'updateMediaTitle', owner: onNode, index: -1, title: 'x' });
+		refused(doc, { type: 'updateMediaTitle', owner: onNode, index: 0.5, title: 'x' });
+	});
+	it('removes the item at the index', () => {
+		let doc = ok(armDragDoc(), { type: 'addMedia', owner: onNode, media: link });
+		doc = ok(doc, { type: 'addMedia', owner: onNode, media: second });
+		doc = ok(doc, { type: 'removeMedia', owner: onNode, index: 0 });
+		expect(doc.nodes[nid('arm-drag')]?.media).toEqual([second]);
+	});
+	it('refuses removeMedia for an unknown owner or bad index', () => {
+		const doc = ok(armDragDoc(), { type: 'addMedia', owner: onNode, media: link });
+		refused(doc, { type: 'removeMedia', owner: { type: 'edge', id: eid('ghost') }, index: 0 });
+		refused(doc, { type: 'removeMedia', owner: onNode, index: 1 });
+		refused(armDragDoc(), { type: 'removeMedia', owner: onNode, index: 0 });
 	});
 });

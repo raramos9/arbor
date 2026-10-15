@@ -8,6 +8,7 @@ export function StrategyNodeView({ data, selected }: NodeProps<StrategyFlowNode>
 			<div className="node-meta">
 				<span>{data.kind}</span>
 				{data.isRoot && <span className="root-badge">start</span>}
+				{data.mediaCount > 0 && <span className="media-badge">▶ {data.mediaCount}</span>}
 			</div>
 			<div className="node-name">{data.name || 'Untitled'}</div>
 			<Handle type="source" position={Position.Bottom} />

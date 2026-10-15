@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { findFreeSpot, isInside, NODE_SIZE } from './flow';
+import { EdgeIdSchema, NodeIdSchema, type Media } from '../model/strategy';
+import { edgeLabel, findFreeSpot, isInside, NODE_SIZE } from './flow';
 
 describe('findFreeSpot', () => {
 	it('returns the candidate on an empty canvas', () => {
@@ -30,5 +31,20 @@ describe('isInside', () => {
 	it('is false when the rect is partly or fully outside the view', () => {
 		expect(isInside({ x: 100, y: 250, ...NODE_SIZE }, view)).toBe(false);
 		expect(isInside({ x: 500, y: 0, ...NODE_SIZE }, view)).toBe(false);
+	});
+});
+
+describe('edgeLabel', () => {
+	const base = { id: EdgeIdSchema.parse('e'), from: NodeIdSchema.parse('a'), to: NodeIdSchema.parse('b'), notes: '' };
+	const clip: Media = { provider: 'web', title: '', url: 'https://example.com' };
+
+	it('leaves the label alone without media', () => {
+		expect(edgeLabel({ ...base, actor: 'me', label: 'Sweep', media: [] })).toBe('Sweep');
+	});
+	it('appends a marker when media exists', () => {
+		expect(edgeLabel({ ...base, actor: 'me', label: 'Sweep', media: [clip] })).toBe('Sweep ▶');
+	});
+	it('shows only the marker for an empty label', () => {
+		expect(edgeLabel({ ...base, actor: 'me', label: '', media: [clip] })).toBe('▶');
 	});
 });

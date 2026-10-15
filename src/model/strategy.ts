@@ -5,6 +5,7 @@ export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 export const StrategyIdSchema = z.string().min(1).brand('StrategyId');
 export const NodeIdSchema = z.string().min(1).brand('NodeId');
 export const EdgeIdSchema = z.string().min(1).brand('EdgeId');
+export const ClipIdSchema = z.string().min(1).brand('ClipId');
 export const LibraryTechniqueIdSchema = z.string().min(1).brand('LibraryTechniqueId');
 export const ReactionSchema = z.string().trim().min(1).brand('Reaction');
 
@@ -12,16 +13,24 @@ export const RulesetSchema = z.enum(['gi', 'no-gi', 'both']);
 export const SideSchema = z.enum(['top', 'bottom', 'standing']);
 export const NodeKindSchema = z.enum(['position', 'technique', 'submission']);
 
-const MediaBase = z.object({ url: z.string(), title: z.string() });
-
-export const MediaLinkSchema = z.discriminatedUnion('provider', [
-	MediaBase.extend({
+export const MediaSchema = z.discriminatedUnion('provider', [
+	z.object({
 		provider: z.literal('youtube'),
+		title: z.string(),
+		url: z.string(),
 		videoId: z.string(),
 		startSeconds: z.number().nullable(),
 	}),
-	MediaBase.extend({ provider: z.literal('instagram') }),
-	MediaBase.extend({ provider: z.literal('web') }),
+	z.object({ provider: z.literal('instagram'), title: z.string(), url: z.string() }),
+	z.object({ provider: z.literal('web'), title: z.string(), url: z.string() }),
+	z.object({
+		provider: z.literal('clip'),
+		title: z.string(),
+		clipId: ClipIdSchema,
+		mimeType: z.string(),
+		durationSeconds: z.number().nullable(),
+		sizeBytes: z.number(),
+	}),
 ]);
 
 export const StrategyNodeSchema = z.object({
@@ -29,7 +38,7 @@ export const StrategyNodeSchema = z.object({
 	kind: NodeKindSchema,
 	name: z.string(),
 	notes: z.string(),
-	media: z.array(MediaLinkSchema),
+	media: z.array(MediaSchema),
 	libraryId: LibraryTechniqueIdSchema.nullable(),
 });
 
@@ -38,7 +47,7 @@ const EdgeBase = z.object({
 	from: NodeIdSchema,
 	to: NodeIdSchema,
 	notes: z.string(),
-	media: z.array(MediaLinkSchema),
+	media: z.array(MediaSchema),
 });
 
 export const StrategyEdgeSchema = z.discriminatedUnion('actor', [
@@ -64,18 +73,20 @@ export const StrategyDocSchema = z.object({
 export type StrategyId = z.infer<typeof StrategyIdSchema>;
 export type NodeId = z.infer<typeof NodeIdSchema>;
 export type EdgeId = z.infer<typeof EdgeIdSchema>;
+export type ClipId = z.infer<typeof ClipIdSchema>;
 export type LibraryTechniqueId = z.infer<typeof LibraryTechniqueIdSchema>;
 export type Reaction = z.infer<typeof ReactionSchema>;
 export type Ruleset = z.infer<typeof RulesetSchema>;
 export type Side = z.infer<typeof SideSchema>;
 export type NodeKind = z.infer<typeof NodeKindSchema>;
-export type MediaLink = z.infer<typeof MediaLinkSchema>;
+export type Media = z.infer<typeof MediaSchema>;
 export type StrategyNode = z.infer<typeof StrategyNodeSchema>;
 export type StrategyEdge = z.infer<typeof StrategyEdgeSchema>;
 export type StrategyDoc = z.infer<typeof StrategyDocSchema>;
 
 export const newNodeId = (): NodeId => NodeIdSchema.parse(crypto.randomUUID());
 export const newEdgeId = (): EdgeId => EdgeIdSchema.parse(crypto.randomUUID());
+export const newClipId = (): ClipId => ClipIdSchema.parse(crypto.randomUUID());
 export const newStrategyId = (): StrategyId => StrategyIdSchema.parse(crypto.randomUUID());
 
 export function parseReaction(label: string): Reaction | null {
