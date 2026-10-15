@@ -14,6 +14,8 @@ What works today:
 - Add positions, techniques, and submissions to a canvas you can pan and zoom.
 - Connect nodes. Every connection says who moves: you, or your opponent. An opponent connection needs a label that describes the reaction.
 - Edit names, kinds, and plain-text notes in the side panel. Drag nodes to arrange them. Delete nodes and connections.
+- Attach media to any node or connection. YouTube links show a thumbnail and play in the side panel, starting at the link's timestamp. Instagram and other links open in a new tab.
+- Record or upload your own clips. On a phone, "Record clip" opens the camera. Clips are stored in your browser's IndexedDB, so they stay on the device that added them and are not backed up.
 - Close the browser and come back. Strategies save to `localStorage` after every change.
 
 ## Run it
@@ -60,14 +62,13 @@ There is no backend yet. Postgres and accounts arrive when strategies need to le
 
 The first milestone finishes the single-user experience:
 
-1. Attach media links (YouTube videos, Instagram reels, and web pages) to nodes and connections.
-2. Pick techniques from a small seed library, alongside creating your own.
-3. Study mode: walk a strategy one decision at a time, choosing your options and your opponent's reactions.
-4. Export and import strategies as JSON files.
+1. Pick techniques from a small seed library, alongside creating your own.
+2. Study mode: walk a strategy one decision at a time, choosing your options and your opponent's reactions.
+3. Export and import strategies as JSON files.
 
 After that:
 
-1. Move storage to Postgres and add accounts.
+1. Move storage to Postgres and add accounts, and upload clips to cloud storage so they can be shared.
 2. Publish strategies, public or private, with a way to report content.
 3. Profiles and shareable strategy pages.
 4. Fork a strategy into your own editable copy, with credit to the original.
