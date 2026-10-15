@@ -2,6 +2,7 @@ import type { LibraryTechnique } from './library';
 import {
 	parseReaction,
 	type EdgeId,
+	type LibraryTechniqueId,
 	type Media,
 	type NodeId,
 	type NodeKind,
@@ -20,6 +21,7 @@ export type MediaOwner = { type: 'node'; id: NodeId } | { type: 'edge'; id: Edge
 export type Command =
 	| { type: 'addNode'; id: NodeId; kind: NodeKind; name: string; at?: { x: number; y: number } }
 	| { type: 'addLibraryNode'; id: NodeId; technique: LibraryTechnique; at?: { x: number; y: number } }
+	| { type: 'linkLibrary'; id: NodeId; libraryId: LibraryTechniqueId }
 	| { type: 'updateNode'; id: NodeId; patch: { name?: string; kind?: NodeKind; notes?: string } }
 	| { type: 'deleteNode'; id: NodeId }
 	| {
@@ -113,6 +115,11 @@ export function apply(doc: StrategyDoc, cmd: Command): ApplyResult {
 				libraryId: technique.id,
 			};
 			return { ok: true, doc: withNode(doc, node, cmd.at) };
+		}
+		case 'linkLibrary': {
+			const node = doc.nodes[cmd.id];
+			if (!node) return refuse('That node does not exist.');
+			return { ok: true, doc: stamp({ ...doc, nodes: { ...doc.nodes, [cmd.id]: { ...node, libraryId: cmd.libraryId } } }) };
 		}
 		case 'updateNode': {
 			const node = doc.nodes[cmd.id];

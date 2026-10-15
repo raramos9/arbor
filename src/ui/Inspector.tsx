@@ -1,14 +1,16 @@
 import type { ApplyResult, Command } from '../model/commands';
-import { LIBRARY } from '../model/library';
 import {
 	NodeKindSchema,
 	RulesetSchema,
 	SideSchema,
+	type LinkMedia,
 	type StrategyDoc,
+	type StrategyNode,
 } from '../model/strategy';
 import { Field, SelectField } from './Field';
 import type { Selection } from './flow';
 import { MediaList } from './MediaList';
+import type { MyLibrary } from './useMyLibrary';
 
 const ACTORS: readonly ['me', 'opponent'] = ['me', 'opponent'];
 
@@ -18,13 +20,31 @@ type Props = {
 	error: string | null;
 	focusName: boolean;
 	exec: (cmd: Command) => ApplyResult;
+	library: MyLibrary;
+	onError: (message: string) => void;
 	onDeleted: () => void;
 };
 
-export function Inspector({ doc, selection, error, focusName, exec, onDeleted }: Props) {
+export function Inspector({ doc, selection, error, focusName, exec, library, onError, onDeleted }: Props) {
 	const node = selection?.type === 'node' ? doc.nodes[selection.id] : undefined;
 	const edge = selection?.type === 'edge' ? doc.edges[selection.id] : undefined;
-	const libraryEntry = node?.libraryId ? LIBRARY.find((t) => t.id === node.libraryId) : undefined;
+	const libraryEntry = node?.libraryId ? library.all.find((t) => t.id === node.libraryId) : undefined;
+
+	function saveToLibrary(source: StrategyNode) {
+		const added = library.add({
+			kind: source.kind,
+			name: source.name,
+			description: source.notes,
+			aliases: '',
+			tags: '',
+			media: source.media.filter((item): item is LinkMedia => item.provider !== 'clip'),
+		});
+		if (!added.ok) {
+			onError(added.error);
+			return;
+		}
+		exec({ type: 'linkLibrary', id: source.id, libraryId: added.value.id });
+	}
 
 	function remove(cmd: Command) {
 		if (exec(cmd).ok) onDeleted();
@@ -35,7 +55,11 @@ export function Inspector({ doc, selection, error, focusName, exec, onDeleted }:
 			{node && (
 				<div className="form" key={node.id}>
 					<h2>Node</h2>
-					{libraryEntry && <p className="muted">From the library: {libraryEntry.name}</p>}
+					{libraryEntry ? (
+						<p className="muted">From the library: {libraryEntry.name}</p>
+					) : (
+						<button onClick={() => saveToLibrary(node)}>Save to library</button>
+					)}
 					<Field
 						label="Name"
 						value={node.name}

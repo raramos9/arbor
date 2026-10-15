@@ -13,6 +13,7 @@ What works today:
 - Create a strategy with a starting position, a ruleset (gi, no-gi, or both), and a starting side (top, bottom, or standing).
 - Add positions, techniques, and submissions to a canvas you can pan and zoom.
 - Pick a technique from a small seed library, or make your own. A picked technique copies its kind, name, and description into a new node, so later library changes never alter your strategy.
+- Add your own positions, techniques, and submissions to the library, either from the picker or from a node with "Save to library". Your entries are stored in this browser next to the seed library. Editing or deleting a library entry never changes nodes already placed.
 - Connect nodes. Every connection says who moves: you, or your opponent. An opponent connection needs a label that describes the reaction.
 - Edit names, kinds, and plain-text notes in the side panel. Drag nodes to arrange them. Delete nodes and connections.
 - Attach media to any node or connection. YouTube links show a thumbnail and play in the side panel, starting at the link's timestamp. Instagram and other links open in a new tab.
