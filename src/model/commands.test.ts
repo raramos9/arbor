@@ -4,6 +4,7 @@ import { armDragDoc } from './fixtures';
 import { parseLibrary, type LibraryTechnique } from './library';
 import {
 	EdgeIdSchema,
+	LibraryTechniqueIdSchema,
 	NodeIdSchema,
 	parseReaction,
 	parseStrategy,
@@ -84,6 +85,18 @@ describe('addLibraryNode', () => {
 	});
 	it('refuses a duplicate id', () => {
 		refused(armDragDoc(), { type: 'addLibraryNode', id: nid('triangle'), technique: technique() });
+	});
+});
+
+describe('linkLibrary', () => {
+	it('sets libraryId and nothing else', () => {
+		const before = armDragDoc();
+		const doc = ok(before, { type: 'linkLibrary', id: nid('triangle'), libraryId: LibraryTechniqueIdSchema.parse('lib-1') });
+		expect(doc.nodes[nid('triangle')]).toEqual({ ...before.nodes[nid('triangle')], libraryId: 'lib-1' });
+		expect(doc.nodes[nid('arm-drag')]).toEqual(before.nodes[nid('arm-drag')]);
+	});
+	it('refuses an unknown node', () => {
+		refused(armDragDoc(), { type: 'linkLibrary', id: nid('ghost'), libraryId: LibraryTechniqueIdSchema.parse('lib-1') });
 	});
 });
 
