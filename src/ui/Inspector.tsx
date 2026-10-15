@@ -1,4 +1,5 @@
 import type { ApplyResult, Command } from '../model/commands';
+import { LIBRARY } from '../model/library';
 import {
 	NodeKindSchema,
 	RulesetSchema,
@@ -23,6 +24,7 @@ type Props = {
 export function Inspector({ doc, selection, error, focusName, exec, onDeleted }: Props) {
 	const node = selection?.type === 'node' ? doc.nodes[selection.id] : undefined;
 	const edge = selection?.type === 'edge' ? doc.edges[selection.id] : undefined;
+	const libraryEntry = node?.libraryId ? LIBRARY.find((t) => t.id === node.libraryId) : undefined;
 
 	function remove(cmd: Command) {
 		if (exec(cmd).ok) onDeleted();
@@ -33,6 +35,7 @@ export function Inspector({ doc, selection, error, focusName, exec, onDeleted }:
 			{node && (
 				<div className="form" key={node.id}>
 					<h2>Node</h2>
+					{libraryEntry && <p className="muted">From the library: {libraryEntry.name}</p>}
 					<Field
 						label="Name"
 						value={node.name}
