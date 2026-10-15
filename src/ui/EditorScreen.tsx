@@ -35,6 +35,7 @@ import { Inspector } from './Inspector';
 import { LibraryDialog } from './LibraryDialog';
 import { StrategyNodeView } from './StrategyNodeView';
 import { useEditor } from './useEditor';
+import { useMyLibrary } from './useMyLibrary';
 
 const nodeTypes = { strategy: StrategyNodeView };
 
@@ -73,6 +74,7 @@ type Pending = { from: StrategyNode; to: StrategyNode };
 
 function Editor({ initial }: { initial: StrategyDoc }) {
 	const { doc, run, persist, saveError } = useEditor(initial);
+	const library = useMyLibrary();
 	const { screenToFlowPosition, setCenter, getZoom } = useReactFlow();
 	const canvasRef = useRef<HTMLDivElement>(null);
 	const [selection, setSelection] = useState<Selection>(null);
@@ -261,11 +263,17 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 					error={error}
 					focusName={focusName}
 					exec={exec}
+					library={library}
+					onError={setError}
 					onDeleted={() => select(null)}
 				/>
 			</div>
 			{pickingLibrary && (
-				<LibraryDialog onPick={addLibraryNode} onCancel={() => setPickingLibrary(false)} />
+				<LibraryDialog
+					library={library}
+					onPick={addLibraryNode}
+					onCancel={() => setPickingLibrary(false)}
+				/>
 			)}
 			{pending && (
 				<ConnectDialog
