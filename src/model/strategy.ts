@@ -22,7 +22,7 @@ const HttpUrlSchema = z.string().refine((value) => {
 	}
 }, 'Links must start with http:// or https://');
 
-export const MediaSchema = z.discriminatedUnion('provider', [
+export const LinkMediaSchema = z.discriminatedUnion('provider', [
 	z.object({
 		provider: z.literal('youtube'),
 		title: z.string(),
@@ -32,6 +32,10 @@ export const MediaSchema = z.discriminatedUnion('provider', [
 	}),
 	z.object({ provider: z.literal('instagram'), title: z.string(), url: HttpUrlSchema }),
 	z.object({ provider: z.literal('web'), title: z.string(), url: HttpUrlSchema }),
+]);
+
+export const MediaSchema = z.discriminatedUnion('provider', [
+	...LinkMediaSchema.options,
 	z.object({
 		provider: z.literal('clip'),
 		title: z.string(),
@@ -88,6 +92,7 @@ export type Reaction = z.infer<typeof ReactionSchema>;
 export type Ruleset = z.infer<typeof RulesetSchema>;
 export type Side = z.infer<typeof SideSchema>;
 export type NodeKind = z.infer<typeof NodeKindSchema>;
+export type LinkMedia = z.infer<typeof LinkMediaSchema>;
 export type Media = z.infer<typeof MediaSchema>;
 export type StrategyNode = z.infer<typeof StrategyNodeSchema>;
 export type StrategyEdge = z.infer<typeof StrategyEdgeSchema>;
