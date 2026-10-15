@@ -1,8 +1,22 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import type { ApplyResult, Command, MediaOwner } from '../model/commands';
-import { hostOf, mediaLabel, parseMediaUrl, youtubeEmbed, youtubeThumbnail } from '../model/media';
-import type { Media } from '../model/strategy';
+import { deleteClip, getClip, saveClip, type StoredClip } from '../clips';
+import {
+	formatDuration,
+	hostOf,
+	mediaLabel,
+	parseMediaUrl,
+	youtubeEmbed,
+	youtubeThumbnail,
+} from '../model/media';
+import { newClipId, type Media } from '../model/strategy';
 import { Field } from './Field';
+import { readVideo } from './poster';
+
+type ClipMedia = Extract<Media, { provider: 'clip' }>;
+
+const MAX_CLIP_BYTES = 300 * 1024 * 1024;
+const MEGABYTE = 1024 * 1024;
 
 type Props = {
 	owner: MediaOwner;
@@ -17,6 +31,45 @@ function mediaKey(media: Media, index: number): string {
 export function MediaList({ owner, media, exec }: Props) {
 	const [input, setInput] = useState('');
 	const [error, setError] = useState<string | null>(null);
+	const [saving, setSaving] = useState(false);
+	const recordRef = useRef<HTMLInputElement>(null);
+	const uploadRef = useRef<HTMLInputElement>(null);
+
+	async function addClip(e: ChangeEvent<HTMLInputElement>) {
+		const file = e.target.files?.[0];
+		e.target.value = '';
+		if (!file) return;
+		if (file.type !== '' && !file.type.startsWith('video/')) {
+			setError('That file is not a video.');
+			return;
+		}
+		if (file.size > MAX_CLIP_BYTES) {
+			setError(
+				`That clip is ${Math.ceil(file.size / MEGABYTE)} MB. Clips can be at most ${MAX_CLIP_BYTES / MEGABYTE} MB.`,
+			);
+			return;
+		}
+		setError(null);
+		setSaving(true);
+		const { poster, durationSeconds } = await readVideo(file);
+		const clipId = newClipId();
+		const saved = await saveClip({ id: clipId, blob: file, poster, createdAt: new Date().toISOString() });
+		if (!saved.ok) {
+			setSaving(false);
+			setError(saved.error);
+			return;
+		}
+		const media: ClipMedia = {
+			provider: 'clip',
+			title: file.name.replace(/\.[^.]+$/, ''),
+			clipId,
+			mimeType: file.type,
+			durationSeconds,
+			sizeBytes: file.size,
+		};
+		if (!exec({ type: 'addMedia', owner, media }).ok) await deleteClip(clipId);
+		setSaving(false);
+	}
 
 	function add() {
 		const parsed = parseMediaUrl(input);
@@ -64,6 +117,17 @@ export function MediaList({ owner, media, exec }: Props) {
 				/>
 				<button onClick={add}>Add link</button>
 			</div>
+			<div className="media-add">
+				<button disabled={saving} onClick={() => recordRef.current?.click()}>
+					Record clip
+				</button>
+				<button disabled={saving} onClick={() => uploadRef.current?.click()}>
+					Upload clip
+				</button>
+				<input ref={recordRef} type="file" accept="video/*" capture="environment" hidden onChange={addClip} />
+				<input ref={uploadRef} type="file" accept="video/*" hidden onChange={addClip} />
+			</div>
+			{saving && <p className="muted">Saving clip…</p>}
 			{error && <p className="error">{error}</p>}
 		</section>
 	);
@@ -78,7 +142,7 @@ function MediaPreview({ media }: { media: Media }) {
 		case 'web':
 			return <LinkCard media={media} note={null} />;
 		case 'clip':
-			return <p className="muted">Clip preview is not available yet.</p>;
+			return <ClipPreview media={media} />;
 		default: {
 			const unreachable: never = media;
 			return unreachable;
@@ -132,4 +196,86 @@ function YouTubePreview({ videoId, startSeconds, url }: YouTubeProps) {
 			</span>
 		</button>
 	);
+}
+
+type ClipState =
+	| { status: 'loading' }
+	| { status: 'missing' }
+	| { status: 'error'; error: string }
+	| { status: 'ready'; clip: StoredClip; posterUrl: string | null; videoUrl: string };
+
+function ClipPreview({ media }: { media: ClipMedia }) {
+	const [state, setState] = useState<ClipState>({ status: 'loading' });
+	const [playing, setPlaying] = useState(false);
+
+	useEffect(() => {
+		let cancelled = false;
+		const urls: string[] = [];
+		const objectUrl = (blob: Blob): string => {
+			const url = URL.createObjectURL(blob);
+			urls.push(url);
+			return url;
+		};
+		void getClip(media.clipId).then((result) => {
+			if (cancelled) return;
+			if (!result.ok) setState({ status: 'error', error: result.error });
+			else if (!result.value) setState({ status: 'missing' });
+			else {
+				const clip = result.value;
+				setState({
+					status: 'ready',
+					clip,
+					posterUrl: clip.poster ? objectUrl(clip.poster) : null,
+					videoUrl: objectUrl(clip.blob),
+				});
+			}
+		});
+		return () => {
+			cancelled = true;
+			for (const url of urls) URL.revokeObjectURL(url);
+		};
+	}, [media.clipId]);
+
+	return (
+		<>
+			<p className="muted">Only on this device</p>
+			<ClipBody media={media} state={state} playing={playing} onPlay={() => setPlaying(true)} />
+		</>
+	);
+}
+
+type ClipBodyProps = { media: ClipMedia; state: ClipState; playing: boolean; onPlay: () => void };
+
+function ClipBody({ media, state, playing, onPlay }: ClipBodyProps) {
+	switch (state.status) {
+		case 'loading':
+			return <div className="video-frame unavailable">Loading clip…</div>;
+		case 'missing':
+			return <div className="video-frame unavailable">This clip isn't on this device</div>;
+		case 'error':
+			return <div className="video-frame unavailable">{state.error}</div>;
+		case 'ready':
+			if (playing) {
+				return (
+					<div className="video-frame">
+						<video src={state.videoUrl} controls autoPlay playsInline />
+					</div>
+				);
+			}
+			return (
+				<button className="video-frame play" aria-label="Play clip" onClick={onPlay}>
+					{state.posterUrl && <img src={state.posterUrl} alt="" />}
+					<span className="play-overlay" aria-hidden="true">
+						▶
+					</span>
+					{media.durationSeconds !== null && (
+						<span className="duration-badge">{formatDuration(media.durationSeconds)}</span>
+					)}
+				</button>
+			);
+		default: {
+			const unreachable: never = state;
+			return unreachable;
+		}
+	}
 }

@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { hostOf, mediaLabel, parseMediaUrl, youtubeEmbed, youtubeThumbnail } from './media';
-import type { Media } from './strategy';
+import { apply, type Command } from './commands';
+import { armDragDoc } from './fixtures';
+import {
+	formatDuration,
+	hostOf,
+	mediaLabel,
+	parseMediaUrl,
+	unreferencedClips,
+	youtubeEmbed,
+	youtubeThumbnail,
+} from './media';
+import { ClipIdSchema, EdgeIdSchema, NodeIdSchema, type ClipId, type Media, type StrategyDoc } from './strategy';
 
 const ID = 'dQw4w9WgXcQ';
 
@@ -152,5 +162,63 @@ describe('labels', () => {
 		expect(mediaLabel(youtube(`https://youtu.be/${ID}`))).toBe('YouTube video');
 		expect(mediaLabel(parsed('https://example.com/a'))).toBe('example.com');
 		expect(mediaLabel(parsed('https://www.instagram.com/reel/C1a'))).toBe('www.instagram.com');
+	});
+});
+
+describe('formatDuration', () => {
+	it('formats m:ss', () => {
+		expect(formatDuration(0)).toBe('0:00');
+		expect(formatDuration(9)).toBe('0:09');
+		expect(formatDuration(75.4)).toBe('1:15');
+		expect(formatDuration(3725)).toBe('62:05');
+	});
+	it('clamps negatives to zero', () => {
+		expect(formatDuration(-3)).toBe('0:00');
+	});
+});
+
+describe('unreferencedClips', () => {
+	const clipId = (s: string): ClipId => ClipIdSchema.parse(s);
+	const clip = (id: string): Media => ({
+		provider: 'clip',
+		title: '',
+		clipId: clipId(id),
+		mimeType: 'video/mp4',
+		durationSeconds: null,
+		sizeBytes: 1,
+	});
+
+	function withClips(doc: StrategyDoc, nodeClip: string | null, edgeClip: string | null): StrategyDoc {
+		const steps: Command[] = [];
+		if (nodeClip) {
+			steps.push({ type: 'addMedia', owner: { type: 'node', id: NodeIdSchema.parse('arm-drag') }, media: clip(nodeClip) });
+		}
+		if (edgeClip) {
+			steps.push({ type: 'addMedia', owner: { type: 'edge', id: EdgeIdSchema.parse('e2') }, media: clip(edgeClip) });
+		}
+		let next = doc;
+		for (const step of steps) {
+			const result = apply(next, step);
+			if (!result.ok) throw new Error(result.reason);
+			next = result.doc;
+		}
+		return next;
+	}
+
+	it('returns every id when nothing references clips', () => {
+		expect(unreferencedClips([armDragDoc()], [clipId('a'), clipId('b')])).toEqual([clipId('a'), clipId('b')]);
+	});
+	it('keeps clips referenced by a node or an edge', () => {
+		const doc = withClips(armDragDoc(), 'a', 'b');
+		expect(unreferencedClips([doc], [clipId('a'), clipId('b'), clipId('c')])).toEqual([clipId('c')]);
+	});
+	it('keeps clips referenced by any strategy', () => {
+		const first = withClips(armDragDoc(), 'a', null);
+		const second = withClips(armDragDoc(), null, 'b');
+		expect(unreferencedClips([first, second], [clipId('a'), clipId('b'), clipId('c')])).toEqual([clipId('c')]);
+	});
+	it('ignores link media and handles no clips', () => {
+		const doc = withClips(armDragDoc(), null, null);
+		expect(unreferencedClips([doc], [])).toEqual([]);
 	});
 });

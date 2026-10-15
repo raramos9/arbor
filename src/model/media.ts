@@ -1,4 +1,4 @@
-import type { Media, Result } from './strategy';
+import type { ClipId, Media, Result, StrategyDoc } from './strategy';
 
 const VIDEO_ID = /^[A-Za-z0-9_-]{11}$/;
 const INSTAGRAM_CODE = /^[A-Za-z0-9_-]+$/;
@@ -91,4 +91,22 @@ export function mediaLabel(media: Media): string {
 			return String(unreachable);
 		}
 	}
+}
+
+export function unreferencedClips(docs: readonly StrategyDoc[], clipIds: readonly ClipId[]): ClipId[] {
+	const referenced = new Set<string>();
+	for (const doc of docs) {
+		for (const owner of [...Object.values(doc.nodes), ...Object.values(doc.edges)]) {
+			for (const item of owner.media) {
+				if (item.provider === 'clip') referenced.add(item.clipId);
+			}
+		}
+	}
+	return clipIds.filter((id) => !referenced.has(id));
+}
+
+export function formatDuration(totalSeconds: number): string {
+	const whole = Math.max(0, Math.round(totalSeconds));
+	const seconds = String(whole % 60).padStart(2, '0');
+	return `${Math.floor(whole / 60)}:${seconds}`;
 }

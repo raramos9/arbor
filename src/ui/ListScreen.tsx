@@ -1,7 +1,15 @@
-import { useState, type FormEvent } from 'react';
-import { createStrategy, RulesetSchema, SideSchema, type Ruleset, type Side } from '../model/strategy';
+import { useEffect, useState, type FormEvent } from 'react';
+import { deleteClip, listClipIds } from '../clips';
+import { unreferencedClips } from '../model/media';
+import { createStrategy, RulesetSchema, SideSchema, type Ruleset, type Side, type StrategyDoc } from '../model/strategy';
 import { editorHref, navigate } from '../route';
 import { listStrategies, saveStrategy } from '../storage';
+
+async function collectClips(docs: StrategyDoc[]) {
+	const listed = await listClipIds();
+	if (!listed.ok) return;
+	for (const id of unreferencedClips(docs, listed.value)) await deleteClip(id);
+}
 
 export function ListScreen() {
 	const [entries] = useState(listStrategies);
@@ -10,6 +18,12 @@ export function ListScreen() {
 	const [ruleset, setRuleset] = useState<Ruleset>('both');
 	const [side, setSide] = useState<Side>('bottom');
 	const [error, setError] = useState<string | null>(null);
+
+	useEffect(() => {
+		const docs = entries.flatMap((entry) => (entry.ok ? [entry.doc] : []));
+		if (docs.length !== entries.length) return;
+		void collectClips(docs);
+	}, [entries]);
 
 	const valid = title.trim() !== '' && rootName.trim() !== '';
 	const sorted = [...entries].sort((a, b) => {
