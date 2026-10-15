@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { apply, defaultActor, type ApplyResult, type Command, type MediaOwner } from './commands';
 import { armDragDoc } from './fixtures';
+import { parseLibrary, type LibraryTechnique } from './library';
 import {
 	EdgeIdSchema,
 	NodeIdSchema,
@@ -38,6 +39,51 @@ describe('defaultActor', () => {
 		expect(defaultActor('position')).toBe('me');
 		expect(defaultActor('technique')).toBe('opponent');
 		expect(defaultActor('submission')).toBe('opponent');
+	});
+});
+
+function technique(): LibraryTechnique {
+	const parsed = parseLibrary([
+		{
+			id: 'closed-guard',
+			kind: 'position',
+			name: 'Closed guard',
+			aliases: [],
+			description: 'Legs locked around the waist.',
+			media: [{ provider: 'web', title: 'Notes', url: 'https://example.com/guard' }],
+			tags: [],
+			source: 'test',
+		},
+	]);
+	if (!parsed.ok || !parsed.value[0]) throw new Error('bad technique');
+	return parsed.value[0];
+}
+
+describe('addLibraryNode', () => {
+	it('copies fields, sets libraryId and layout', () => {
+		const source = technique();
+		const doc = ok(armDragDoc(), { type: 'addLibraryNode', id: nid('n'), technique: source, at: { x: 1, y: 2 } });
+		expect(doc.nodes[nid('n')]).toEqual({
+			id: nid('n'),
+			kind: 'position',
+			name: 'Closed guard',
+			notes: 'Legs locked around the waist.',
+			media: source.media,
+			libraryId: source.id,
+		});
+		expect(doc.layout[nid('n')]).toEqual({ x: 1, y: 2 });
+	});
+	it('does not share media with the technique', () => {
+		const source = technique();
+		const doc = ok(armDragDoc(), { type: 'addLibraryNode', id: nid('n'), technique: source });
+		source.media.push({ provider: 'web', title: 'Later', url: 'https://example.com/later' });
+		if (source.media[0]) source.media[0].title = 'Changed';
+		expect(doc.nodes[nid('n')]?.media).toEqual([
+			{ provider: 'web', title: 'Notes', url: 'https://example.com/guard' },
+		]);
+	});
+	it('refuses a duplicate id', () => {
+		refused(armDragDoc(), { type: 'addLibraryNode', id: nid('triangle'), technique: technique() });
 	});
 });
 

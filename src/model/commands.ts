@@ -1,3 +1,4 @@
+import type { LibraryTechnique } from './library';
 import {
 	parseReaction,
 	type EdgeId,
@@ -18,6 +19,7 @@ export type MediaOwner = { type: 'node'; id: NodeId } | { type: 'edge'; id: Edge
 
 export type Command =
 	| { type: 'addNode'; id: NodeId; kind: NodeKind; name: string; at?: { x: number; y: number } }
+	| { type: 'addLibraryNode'; id: NodeId; technique: LibraryTechnique; at?: { x: number; y: number } }
 	| { type: 'updateNode'; id: NodeId; patch: { name?: string; kind?: NodeKind; notes?: string } }
 	| { type: 'deleteNode'; id: NodeId }
 	| {
@@ -77,6 +79,14 @@ function inRange(list: readonly unknown[], index: number): boolean {
 	return Number.isInteger(index) && index >= 0 && index < list.length;
 }
 
+function withNode(doc: StrategyDoc, node: StrategyNode, at?: { x: number; y: number }): StrategyDoc {
+	return stamp({
+		...doc,
+		nodes: { ...doc.nodes, [node.id]: node },
+		layout: at ? { ...doc.layout, [node.id]: at } : doc.layout,
+	});
+}
+
 export function apply(doc: StrategyDoc, cmd: Command): ApplyResult {
 	switch (cmd.type) {
 		case 'addNode': {
@@ -89,14 +99,20 @@ export function apply(doc: StrategyDoc, cmd: Command): ApplyResult {
 				media: [],
 				libraryId: null,
 			};
-			return {
-				ok: true,
-				doc: stamp({
-					...doc,
-					nodes: { ...doc.nodes, [cmd.id]: node },
-					layout: cmd.at ? { ...doc.layout, [cmd.id]: cmd.at } : doc.layout,
-				}),
+			return { ok: true, doc: withNode(doc, node, cmd.at) };
+		}
+		case 'addLibraryNode': {
+			if (doc.nodes[cmd.id]) return refuse('A node with that id already exists.');
+			const { technique } = cmd;
+			const node: StrategyNode = {
+				id: cmd.id,
+				kind: technique.kind,
+				name: technique.name,
+				notes: technique.description,
+				media: technique.media.map((item) => ({ ...item })),
+				libraryId: technique.id,
 			};
+			return { ok: true, doc: withNode(doc, node, cmd.at) };
 		}
 		case 'updateNode': {
 			const node = doc.nodes[cmd.id];

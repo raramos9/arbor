@@ -1,0 +1,595 @@
+[
+	{
+		"id": "closed-guard",
+		"kind": "position",
+		"name": "Closed guard",
+		"aliases": [
+			"Full guard"
+		],
+		"description": "A guard position where the bottom player wraps their legs around the opponent's waist and locks the ankles.",
+		"media": [],
+		"tags": [
+			"guard",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "half-guard",
+		"kind": "position",
+		"name": "Half guard",
+		"aliases": [],
+		"description": "A position where the bottom player controls one of the opponent's legs between their own legs.",
+		"media": [],
+		"tags": [
+			"guard",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "butterfly-guard",
+		"kind": "position",
+		"name": "Butterfly guard",
+		"aliases": [],
+		"description": "A seated open guard where the bottom player places a foot hook inside each of the opponent's thighs.",
+		"media": [],
+		"tags": [
+			"guard",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "de-la-riva-guard",
+		"kind": "position",
+		"name": "De la Riva guard",
+		"aliases": [
+			"DLR"
+		],
+		"description": "An open guard where the bottom player hooks the outside of the opponent's lead leg with their own leg, usually while gripping the ankle or sleeve.",
+		"media": [],
+		"tags": [
+			"guard",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "open-guard",
+		"kind": "position",
+		"name": "Open guard",
+		"aliases": [],
+		"description": "Any guard where the bottom player controls the opponent with their feet, legs and grips without locking the legs around the waist.",
+		"media": [],
+		"tags": [
+			"guard",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "mount",
+		"kind": "position",
+		"name": "Mount",
+		"aliases": [
+			"Full mount"
+		],
+		"description": "A dominant top position where one player sits astride the opponent's torso.",
+		"media": [],
+		"tags": [
+			"top",
+			"pin",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "side-control",
+		"kind": "position",
+		"name": "Side control",
+		"aliases": [
+			"Side mount",
+			"Cross side"
+		],
+		"description": "A dominant top position where one player pins the opponent from the side, chest on chest, perpendicular to them.",
+		"media": [],
+		"tags": [
+			"top",
+			"pin",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "back-control",
+		"kind": "position",
+		"name": "Back control",
+		"aliases": [
+			"Back mount",
+			"Rear mount"
+		],
+		"description": "A dominant position behind the opponent with both hooks or a body triangle in and a seat belt grip on the upper body.",
+		"media": [],
+		"tags": [
+			"top",
+			"pin",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "north-south",
+		"kind": "position",
+		"name": "North-south",
+		"aliases": [],
+		"description": "A pinning position where the top player lies chest down across the opponent with their head toward the opponent's feet.",
+		"media": [],
+		"tags": [
+			"top",
+			"pin",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "knee-on-belly",
+		"kind": "position",
+		"name": "Knee on belly",
+		"aliases": [
+			"Knee ride"
+		],
+		"description": "A top position where one player drives a knee onto the opponent's torso while staying mobile.",
+		"media": [],
+		"tags": [
+			"top",
+			"pin",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "turtle",
+		"kind": "position",
+		"name": "Turtle",
+		"aliases": [],
+		"description": "A defensive position where a player is on their hands and knees with their elbows tucked in.",
+		"media": [],
+		"tags": [
+			"defense",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "standing",
+		"kind": "position",
+		"name": "Standing",
+		"aliases": [
+			"Stand-up"
+		],
+		"description": "Both players on their feet before a takedown or guard pull.",
+		"media": [],
+		"tags": [
+			"takedown",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "scissor-sweep",
+		"kind": "technique",
+		"name": "Scissor sweep",
+		"aliases": [],
+		"description": "From closed guard, the bottom player pulls the opponent forward and scissors their legs to tip them to the side and come on top.",
+		"media": [],
+		"tags": [
+			"sweep",
+			"guard",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "hip-bump-sweep",
+		"kind": "technique",
+		"name": "Hip bump sweep",
+		"aliases": [
+			"Sit-up sweep"
+		],
+		"description": "From closed guard, the bottom player sits up, posts a hand behind and bumps their hips into the opponent to roll them over and land in mount.",
+		"media": [],
+		"tags": [
+			"sweep",
+			"guard",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "flower-sweep",
+		"kind": "technique",
+		"name": "Flower sweep",
+		"aliases": [
+			"Pendulum sweep"
+		],
+		"description": "From closed guard, the bottom player swings a leg like a pendulum while controlling the opponent's arm and leg to roll them over.",
+		"media": [],
+		"tags": [
+			"sweep",
+			"guard",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "arm-drag",
+		"kind": "technique",
+		"name": "Arm drag",
+		"aliases": [],
+		"description": "Pulling the opponent's arm across their body to move behind them or off-balance them.",
+		"media": [],
+		"tags": [
+			"back-take",
+			"guard",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "back-take",
+		"kind": "technique",
+		"name": "Back take",
+		"aliases": [
+			"Take the back"
+		],
+		"description": "Moving from a dominant or scrambling position to the opponent's back and securing hooks.",
+		"media": [],
+		"tags": [
+			"back",
+			"transition",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "double-leg-takedown",
+		"kind": "technique",
+		"name": "Double leg takedown",
+		"aliases": [],
+		"description": "A takedown where the attacker drives forward, wraps both of the opponent's legs and brings them to the mat.",
+		"media": [],
+		"tags": [
+			"takedown",
+			"wrestling",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "single-leg-takedown",
+		"kind": "technique",
+		"name": "Single leg takedown",
+		"aliases": [],
+		"description": "A takedown where the attacker lifts and controls one of the opponent's legs to finish them to the mat.",
+		"media": [],
+		"tags": [
+			"takedown",
+			"wrestling",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "torreando-pass",
+		"kind": "technique",
+		"name": "Torreando pass",
+		"aliases": [
+			"Bullfighter pass"
+		],
+		"description": "A guard pass where the top player controls the opponent's legs at the hips or ankles and steps around them to side control.",
+		"media": [],
+		"tags": [
+			"pass",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "knee-slice-pass",
+		"kind": "technique",
+		"name": "Knee slice pass",
+		"aliases": [
+			"Knee cut pass"
+		],
+		"description": "A guard pass where the top player slices a knee across the opponent's thigh and drops into side control.",
+		"media": [],
+		"tags": [
+			"pass",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "shrimp-escape",
+		"kind": "technique",
+		"name": "Hip escape from mount",
+		"aliases": [
+			"Shrimp escape",
+			"Elbow-knee escape"
+		],
+		"description": "An escape from mount where the bottom player bridges and shrimps their hips out to recover guard.",
+		"media": [],
+		"tags": [
+			"escape",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "bridge-and-roll-escape",
+		"kind": "technique",
+		"name": "Bridge and roll escape",
+		"aliases": [
+			"Upa escape",
+			"Trap and roll"
+		],
+		"description": "An escape from mount where the bottom player traps an arm and foot on the same side and bridges to roll the opponent over.",
+		"media": [],
+		"tags": [
+			"escape",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "armbar",
+		"kind": "submission",
+		"name": "Armbar",
+		"aliases": [
+			"Straight armbar",
+			"Juji gatame"
+		],
+		"description": "A joint lock that hyperextends the opponent's elbow by controlling the arm between the attacker's legs and hips.",
+		"media": [],
+		"tags": [
+			"joint-lock",
+			"arm-lock",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "triangle-choke",
+		"kind": "submission",
+		"name": "Triangle choke",
+		"aliases": [
+			"Sankaku jime"
+		],
+		"description": "A choke where the attacker traps one of the opponent's arms and the head inside a triangle of their legs.",
+		"media": [],
+		"tags": [
+			"choke",
+			"guard",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "kimura",
+		"kind": "submission",
+		"name": "Kimura",
+		"aliases": [
+			"Double wristlock",
+			"Gyaku ude garami"
+		],
+		"description": "A shoulder lock that rotates the opponent's arm behind their back while gripping the wrist and the upper arm.",
+		"media": [],
+		"tags": [
+			"joint-lock",
+			"shoulder-lock",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "americana",
+		"kind": "submission",
+		"name": "Americana",
+		"aliases": [
+			"Keylock",
+			"Ude garami"
+		],
+		"description": "A shoulder lock that pushes the opponent's wrist toward the mat or their hip while the elbow is pinned.",
+		"media": [],
+		"tags": [
+			"joint-lock",
+			"shoulder-lock",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "rear-naked-choke",
+		"kind": "submission",
+		"name": "Rear naked choke",
+		"aliases": [
+			"RNC",
+			"Mata leao"
+		],
+		"description": "A choke from back control where the attacker wraps an arm around the neck and squeezes with the biceps and forearm.",
+		"media": [],
+		"tags": [
+			"choke",
+			"back",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "guillotine-choke",
+		"kind": "submission",
+		"name": "Guillotine choke",
+		"aliases": [],
+		"description": "A front headlock choke where the attacker wraps an arm around the opponent's neck and lifts to compress the throat.",
+		"media": [],
+		"tags": [
+			"choke",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "cross-collar-choke",
+		"kind": "submission",
+		"name": "Cross collar choke",
+		"aliases": [
+			"X-choke",
+			"Cross choke"
+		],
+		"description": "A gi choke where the attacker crosses their hands deep in the opponent's collars and squeezes against the neck.",
+		"media": [],
+		"tags": [
+			"choke",
+			"gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "omoplata",
+		"kind": "submission",
+		"name": "Omoplata",
+		"aliases": [],
+		"description": "A shoulder lock where the attacker uses their legs to trap the opponent's arm and rotate the shoulder.",
+		"media": [],
+		"tags": [
+			"joint-lock",
+			"shoulder-lock",
+			"guard",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "heel-hook",
+		"kind": "submission",
+		"name": "Heel hook",
+		"aliases": [],
+		"description": "A leg lock that twists the opponent's heel to strain the knee.",
+		"media": [],
+		"tags": [
+			"leg-lock",
+			"joint-lock",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "straight-ankle-lock",
+		"kind": "submission",
+		"name": "Straight ankle lock",
+		"aliases": [
+			"Achilles lock",
+			"Straight footlock"
+		],
+		"description": "A leg lock that pressures the opponent's Achilles tendon and ankle with the forearm.",
+		"media": [],
+		"tags": [
+			"leg-lock",
+			"joint-lock",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "darce-choke",
+		"kind": "submission",
+		"name": "D'Arce choke",
+		"aliases": [
+			"Darce"
+		],
+		"description": "An arm-in choke where the attacker threads an arm under the opponent's armpit and around the neck to squeeze the neck with the arm and shoulder.",
+		"media": [],
+		"tags": [
+			"choke",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "arm-triangle-choke",
+		"kind": "submission",
+		"name": "Arm triangle choke",
+		"aliases": [
+			"Head and arm choke",
+			"Kata gatame"
+		],
+		"description": "A choke where the attacker traps the opponent's head and one arm together and squeezes the neck against the shoulder.",
+		"media": [],
+		"tags": [
+			"choke",
+			"gi",
+			"no-gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "bow-and-arrow-choke",
+		"kind": "submission",
+		"name": "Bow and arrow choke",
+		"aliases": [],
+		"description": "A gi choke from back control where the attacker grips a collar and the opponent's leg and stretches the body out to tighten the choke.",
+		"media": [],
+		"tags": [
+			"choke",
+			"back",
+			"gi"
+		],
+		"source": "Arbor seed library"
+	},
+	{
+		"id": "ezekiel-choke",
+		"kind": "submission",
+		"name": "Ezekiel choke",
+		"aliases": [],
+		"description": "A choke where the attacker presses a forearm across the neck while gripping their own sleeve, often from mount or guard.",
+		"media": [],
+		"tags": [
+			"choke",
+			"gi"
+		],
+		"source": "Arbor seed library"
+	}
+]
