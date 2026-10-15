@@ -13,16 +13,25 @@ export const RulesetSchema = z.enum(['gi', 'no-gi', 'both']);
 export const SideSchema = z.enum(['top', 'bottom', 'standing']);
 export const NodeKindSchema = z.enum(['position', 'technique', 'submission']);
 
+const HttpUrlSchema = z.string().refine((value) => {
+	try {
+		const { protocol } = new URL(value);
+		return protocol === 'http:' || protocol === 'https:';
+	} catch {
+		return false;
+	}
+}, 'Links must start with http:// or https://');
+
 export const MediaSchema = z.discriminatedUnion('provider', [
 	z.object({
 		provider: z.literal('youtube'),
 		title: z.string(),
-		url: z.string(),
-		videoId: z.string(),
+		url: HttpUrlSchema,
+		videoId: z.string().regex(/^[A-Za-z0-9_-]{11}$/),
 		startSeconds: z.number().nullable(),
 	}),
-	z.object({ provider: z.literal('instagram'), title: z.string(), url: z.string() }),
-	z.object({ provider: z.literal('web'), title: z.string(), url: z.string() }),
+	z.object({ provider: z.literal('instagram'), title: z.string(), url: HttpUrlSchema }),
+	z.object({ provider: z.literal('web'), title: z.string(), url: HttpUrlSchema }),
 	z.object({
 		provider: z.literal('clip'),
 		title: z.string(),

@@ -17,6 +17,30 @@ describe('parseStrategy', () => {
 		if (!result.ok) expect(result.error).toContain('unknown node');
 	});
 
+	it('rejects a stored link that is not http or https', () => {
+		const input = structuredClone(armDragInput);
+		Object.assign(input.nodes['arm-drag'], {
+			media: [{ provider: 'web', title: '', url: 'javascript:alert(1)' }],
+		});
+		expect(parseStrategy(input).ok).toBe(false);
+	});
+
+	it('rejects a stored YouTube id that could change the embed path', () => {
+		const input = structuredClone(armDragInput);
+		Object.assign(input.nodes['arm-drag'], {
+			media: [{ provider: 'youtube', title: '', url: 'https://youtu.be/x', videoId: '../../evil', startSeconds: null }],
+		});
+		expect(parseStrategy(input).ok).toBe(false);
+	});
+
+	it('accepts a stored https link', () => {
+		const input = structuredClone(armDragInput);
+		Object.assign(input.nodes['arm-drag'], {
+			media: [{ provider: 'web', title: '', url: 'https://example.com/arm-drag' }],
+		});
+		expect(parseStrategy(input).ok).toBe(true);
+	});
+
 	it('rejects a self-loop edge', () => {
 		const input = structuredClone(armDragInput);
 		input.edges.e2.to = 'arm-drag';
