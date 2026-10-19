@@ -1,10 +1,10 @@
 import { MarkerType, type Edge, type Node } from '@xyflow/react';
-import type { NodeKind, StrategyDoc, StrategyEdge } from '../model/strategy';
+import type { StrategyDoc, StrategyEdge } from '../model/strategy';
 import type { EdgeId, NodeId } from '../model/strategy';
 
 export type Selection = { type: 'node'; id: NodeId } | { type: 'edge'; id: EdgeId } | null;
 
-export type StrategyNodeData = { name: string; kind: NodeKind; isRoot: boolean; mediaCount: number };
+export type StrategyNodeData = { name: string; isRoot: boolean; mediaCount: number };
 export type StrategyFlowNode = Node<StrategyNodeData, 'strategy'>;
 export type Size = { width: number; height: number };
 
@@ -29,7 +29,6 @@ export function toFlowNodes(
 			position: doc.layout[node.id] ?? autoPosition(index),
 			data: {
 				name: node.name,
-				kind: node.kind,
 				isRoot: node.id === doc.rootNodeId,
 				mediaCount: node.media.length,
 			},
@@ -50,7 +49,6 @@ export function toFlowEdges(doc: StrategyDoc, selection: Selection): Edge[] {
 		source: edge.from,
 		target: edge.to,
 		label: edgeLabel(edge),
-		className: `edge-${edge.actor}`,
 		markerEnd: { type: MarkerType.ArrowClosed },
 		selected: selection?.type === 'edge' && selection.id === edge.id,
 	}));

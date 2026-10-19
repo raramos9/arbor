@@ -1,12 +1,7 @@
-import type { LibraryTechnique } from './library';
 import {
-	parseReaction,
 	type EdgeId,
-	type LibraryTechniqueId,
 	type Media,
 	type NodeId,
-	type NodeKind,
-	type Reaction,
 	type Ruleset,
 	type Side,
 	type StrategyDoc,
@@ -14,27 +9,23 @@ import {
 	type StrategyNode,
 } from './strategy';
 
-export type EdgeActor = StrategyEdge['actor'];
-
 export type MediaOwner = { type: 'node'; id: NodeId } | { type: 'edge'; id: EdgeId };
 
 export type Command =
-	| { type: 'addNode'; id: NodeId; kind: NodeKind; name: string; at?: { x: number; y: number } }
-	| { type: 'addLibraryNode'; id: NodeId; technique: LibraryTechnique; at?: { x: number; y: number } }
-	| { type: 'linkLibrary'; id: NodeId; libraryId: LibraryTechniqueId }
-	| { type: 'updateNode'; id: NodeId; patch: { name?: string; kind?: NodeKind; notes?: string } }
+	| { type: 'addNode'; id: NodeId; name: string; at?: { x: number; y: number } }
+	| { type: 'updateNode'; id: NodeId; patch: { name?: string; notes?: string } }
 	| { type: 'deleteNode'; id: NodeId }
 	| {
 			type: 'connect';
 			id: EdgeId;
 			from: NodeId;
 			to: NodeId;
-			move: { actor: 'me'; label: string } | { actor: 'opponent'; label: Reaction };
+			label: string;
 	  }
 	| {
 			type: 'updateEdge';
 			id: EdgeId;
-			patch: { actor?: EdgeActor; label?: string; notes?: string };
+			patch: { label?: string; notes?: string };
 	  }
 	| { type: 'deleteEdge'; id: EdgeId }
 	| { type: 'moveNode'; id: NodeId; at: { x: number; y: number } }
@@ -50,10 +41,6 @@ export type Command =
 export type ApplyResult = { ok: true; doc: StrategyDoc } | { ok: false; reason: string };
 
 const refuse = (reason: string): ApplyResult => ({ ok: false, reason });
-
-export function defaultActor(kind: NodeKind): EdgeActor {
-	return kind === 'position' ? 'me' : 'opponent';
-}
 
 function omit<V>(record: Record<string, V>, key: string): Record<string, V> {
 	return Object.fromEntries(Object.entries(record).filter(([k]) => k !== key));
@@ -95,43 +82,18 @@ export function apply(doc: StrategyDoc, cmd: Command): ApplyResult {
 			if (doc.nodes[cmd.id]) return refuse('A node with that id already exists.');
 			const node: StrategyNode = {
 				id: cmd.id,
-				kind: cmd.kind,
 				name: cmd.name,
 				notes: '',
 				media: [],
-				libraryId: null,
 			};
 			return { ok: true, doc: withNode(doc, node, cmd.at) };
-		}
-		case 'addLibraryNode': {
-			if (doc.nodes[cmd.id]) return refuse('A node with that id already exists.');
-			const { technique } = cmd;
-			const node: StrategyNode = {
-				id: cmd.id,
-				kind: technique.kind,
-				name: technique.name,
-				notes: technique.description,
-				media: technique.media.map((item) => ({ ...item })),
-				libraryId: technique.id,
-			};
-			return { ok: true, doc: withNode(doc, node, cmd.at) };
-		}
-		case 'linkLibrary': {
-			const node = doc.nodes[cmd.id];
-			if (!node) return refuse('That node does not exist.');
-			return { ok: true, doc: stamp({ ...doc, nodes: { ...doc.nodes, [cmd.id]: { ...node, libraryId: cmd.libraryId } } }) };
 		}
 		case 'updateNode': {
 			const node = doc.nodes[cmd.id];
 			if (!node) return refuse('That node does not exist.');
-			const { kind } = cmd.patch;
-			if (kind && kind !== 'position' && cmd.id === doc.rootNodeId) {
-				return refuse('The start node must stay a position. Set another position as the start first.');
-			}
 			const next: StrategyNode = {
 				...node,
 				name: cmd.patch.name ?? node.name,
-				kind: kind ?? node.kind,
 				notes: cmd.patch.notes ?? node.notes,
 			};
 			return { ok: true, doc: stamp({ ...doc, nodes: { ...doc.nodes, [cmd.id]: next } }) };
@@ -139,7 +101,7 @@ export function apply(doc: StrategyDoc, cmd: Command): ApplyResult {
 		case 'deleteNode': {
 			if (!doc.nodes[cmd.id]) return refuse('That node does not exist.');
 			if (cmd.id === doc.rootNodeId) {
-				return refuse('The start node cannot be deleted. Set another position as the start first.');
+				return refuse('The start node cannot be deleted. Set another node as the start first.');
 			}
 			const edges = Object.fromEntries(
 				Object.entries(doc.edges).filter(([, e]) => e.from !== cmd.id && e.to !== cmd.id),
@@ -158,32 +120,17 @@ export function apply(doc: StrategyDoc, cmd: Command): ApplyResult {
 			if (doc.edges[cmd.id]) return refuse('An edge with that id already exists.');
 			if (!doc.nodes[cmd.from] || !doc.nodes[cmd.to]) return refuse('Both ends must be existing nodes.');
 			if (cmd.from === cmd.to) return refuse('A node cannot connect to itself.');
-			const base = { id: cmd.id, from: cmd.from, to: cmd.to, notes: '', media: [] };
-			let edge: StrategyEdge;
-			if (cmd.move.actor === 'opponent') {
-				const label = parseReaction(cmd.move.label);
-				if (!label) return refuse('An opponent reaction needs a label.');
-				edge = { ...base, actor: 'opponent', label };
-			} else {
-				edge = { ...base, actor: 'me', label: cmd.move.label.trim() };
-			}
+			const edge: StrategyEdge = { id: cmd.id, from: cmd.from, to: cmd.to, label: cmd.label.trim(), notes: '', media: [] };
 			return { ok: true, doc: stamp({ ...doc, edges: { ...doc.edges, [cmd.id]: edge } }) };
 		}
 		case 'updateEdge': {
 			const edge = doc.edges[cmd.id];
 			if (!edge) return refuse('That edge does not exist.');
-			const actor = cmd.patch.actor ?? edge.actor;
-			const label = cmd.patch.label ?? edge.label;
-			const notes = cmd.patch.notes ?? edge.notes;
-			const base = { id: edge.id, from: edge.from, to: edge.to, media: edge.media, notes };
-			let next: StrategyEdge;
-			if (actor === 'opponent') {
-				const reaction = parseReaction(label);
-				if (!reaction) return refuse('An opponent reaction needs a label.');
-				next = { ...base, actor, label: reaction };
-			} else {
-				next = { ...base, actor, label: label.trim() };
-			}
+			const next: StrategyEdge = {
+				...edge,
+				label: cmd.patch.label?.trim() ?? edge.label,
+				notes: cmd.patch.notes ?? edge.notes,
+			};
 			return { ok: true, doc: stamp({ ...doc, edges: { ...doc.edges, [cmd.id]: next } }) };
 		}
 		case 'deleteEdge': {
@@ -195,9 +142,7 @@ export function apply(doc: StrategyDoc, cmd: Command): ApplyResult {
 			return { ok: true, doc: stamp({ ...doc, layout: { ...doc.layout, [cmd.id]: cmd.at } }) };
 		}
 		case 'setRoot': {
-			const node = doc.nodes[cmd.id];
-			if (!node) return refuse('That node does not exist.');
-			if (node.kind !== 'position') return refuse('Only a position can be the start.');
+			if (!doc.nodes[cmd.id]) return refuse('That node does not exist.');
 			return { ok: true, doc: stamp({ ...doc, rootNodeId: cmd.id }) };
 		}
 		case 'addMedia': {

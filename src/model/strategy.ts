@@ -6,12 +6,9 @@ export const StrategyIdSchema = z.string().min(1).brand('StrategyId');
 export const NodeIdSchema = z.string().min(1).brand('NodeId');
 export const EdgeIdSchema = z.string().min(1).brand('EdgeId');
 export const ClipIdSchema = z.string().min(1).brand('ClipId');
-export const LibraryTechniqueIdSchema = z.string().min(1).brand('LibraryTechniqueId');
-export const ReactionSchema = z.string().trim().min(1).brand('Reaction');
 
 export const RulesetSchema = z.enum(['gi', 'no-gi', 'both']);
 export const SideSchema = z.enum(['top', 'bottom', 'standing']);
-export const NodeKindSchema = z.enum(['position', 'technique', 'submission']);
 
 const HttpUrlSchema = z.string().refine((value) => {
 	try {
@@ -48,28 +45,22 @@ export const MediaSchema = z.discriminatedUnion('provider', [
 
 export const StrategyNodeSchema = z.object({
 	id: NodeIdSchema,
-	kind: NodeKindSchema,
 	name: z.string(),
 	notes: z.string(),
 	media: z.array(MediaSchema),
-	libraryId: LibraryTechniqueIdSchema.nullable(),
 });
 
-const EdgeBase = z.object({
+export const StrategyEdgeSchema = z.object({
 	id: EdgeIdSchema,
 	from: NodeIdSchema,
 	to: NodeIdSchema,
+	label: z.string(),
 	notes: z.string(),
 	media: z.array(MediaSchema),
 });
 
-export const StrategyEdgeSchema = z.discriminatedUnion('actor', [
-	EdgeBase.extend({ actor: z.literal('me'), label: z.string() }),
-	EdgeBase.extend({ actor: z.literal('opponent'), label: ReactionSchema }),
-]);
-
 export const StrategyDocSchema = z.object({
-	schemaVersion: z.literal(1),
+	schemaVersion: z.union([z.literal(1), z.literal(2)]).transform((): 2 => 2),
 	id: StrategyIdSchema,
 	title: z.string(),
 	description: z.string(),
@@ -87,11 +78,8 @@ export type StrategyId = z.infer<typeof StrategyIdSchema>;
 export type NodeId = z.infer<typeof NodeIdSchema>;
 export type EdgeId = z.infer<typeof EdgeIdSchema>;
 export type ClipId = z.infer<typeof ClipIdSchema>;
-export type LibraryTechniqueId = z.infer<typeof LibraryTechniqueIdSchema>;
-export type Reaction = z.infer<typeof ReactionSchema>;
 export type Ruleset = z.infer<typeof RulesetSchema>;
 export type Side = z.infer<typeof SideSchema>;
-export type NodeKind = z.infer<typeof NodeKindSchema>;
 export type LinkMedia = z.infer<typeof LinkMediaSchema>;
 export type Media = z.infer<typeof MediaSchema>;
 export type StrategyNode = z.infer<typeof StrategyNodeSchema>;
@@ -102,11 +90,6 @@ export const newNodeId = (): NodeId => NodeIdSchema.parse(crypto.randomUUID());
 export const newEdgeId = (): EdgeId => EdgeIdSchema.parse(crypto.randomUUID());
 export const newClipId = (): ClipId => ClipIdSchema.parse(crypto.randomUUID());
 export const newStrategyId = (): StrategyId => StrategyIdSchema.parse(crypto.randomUUID());
-
-export function parseReaction(label: string): Reaction | null {
-	const parsed = ReactionSchema.safeParse(label);
-	return parsed.success ? parsed.data : null;
-}
 
 function describeIssues(error: z.ZodError): string {
 	return error.issues.map((i) => `${i.path.join('.') || 'document'}: ${i.message}`).join('; ');
@@ -121,7 +104,6 @@ function checkInvariants(doc: StrategyDoc): string | null {
 	}
 	const root = doc.nodes[doc.rootNodeId];
 	if (!root) return `root node ${doc.rootNodeId} does not exist`;
-	if (root.kind !== 'position') return 'root node must be a position';
 	for (const edge of Object.values(doc.edges)) {
 		if (!doc.nodes[edge.from]) return `edge ${edge.id} starts at unknown node ${edge.from}`;
 		if (!doc.nodes[edge.to]) return `edge ${edge.id} ends at unknown node ${edge.to}`;
@@ -147,7 +129,7 @@ export function createStrategy(args: {
 	const rootId = newNodeId();
 	const now = new Date().toISOString();
 	return {
-		schemaVersion: 1,
+		schemaVersion: 2,
 		id: newStrategyId(),
 		title: args.title,
 		description: '',
@@ -157,11 +139,9 @@ export function createStrategy(args: {
 		nodes: {
 			[rootId]: {
 				id: rootId,
-				kind: 'position',
 				name: args.rootName,
 				notes: '',
 				media: [],
-				libraryId: null,
 			},
 		},
 		edges: {},

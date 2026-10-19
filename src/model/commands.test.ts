@@ -1,12 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { apply, defaultActor, type ApplyResult, type Command, type MediaOwner } from './commands';
+import { apply, type ApplyResult, type Command, type MediaOwner } from './commands';
 import { armDragDoc } from './fixtures';
-import { parseLibrary, type LibraryTechnique } from './library';
 import {
 	EdgeIdSchema,
-	LibraryTechniqueIdSchema,
 	NodeIdSchema,
-	parseReaction,
 	parseStrategy,
 	type EdgeId,
 	type Media,
@@ -16,11 +13,6 @@ import {
 
 const nid = (s: string): NodeId => NodeIdSchema.parse(s);
 const eid = (s: string): EdgeId => EdgeIdSchema.parse(s);
-const reaction = (s: string) => {
-	const r = parseReaction(s);
-	if (!r) throw new Error('bad reaction');
-	return r;
-};
 
 function ok(doc: StrategyDoc, cmd: Command): StrategyDoc {
 	const result: ApplyResult = apply(doc, cmd);
@@ -35,105 +27,37 @@ function refused(doc: StrategyDoc, cmd: Command): string {
 	return result.reason;
 }
 
-describe('defaultActor', () => {
-	it('is me from a position and opponent otherwise', () => {
-		expect(defaultActor('position')).toBe('me');
-		expect(defaultActor('technique')).toBe('opponent');
-		expect(defaultActor('submission')).toBe('opponent');
-	});
-});
-
-function technique(): LibraryTechnique {
-	const parsed = parseLibrary([
-		{
-			id: 'closed-guard',
-			kind: 'position',
-			name: 'Closed guard',
-			aliases: [],
-			description: 'Legs locked around the waist.',
-			media: [{ provider: 'web', title: 'Notes', url: 'https://example.com/guard' }],
-			tags: [],
-			source: 'test',
-		},
-	]);
-	if (!parsed.ok || !parsed.value[0]) throw new Error('bad technique');
-	return parsed.value[0];
-}
-
-describe('addLibraryNode', () => {
-	it('copies fields, sets libraryId and layout', () => {
-		const source = technique();
-		const doc = ok(armDragDoc(), { type: 'addLibraryNode', id: nid('n'), technique: source, at: { x: 1, y: 2 } });
-		expect(doc.nodes[nid('n')]).toEqual({
-			id: nid('n'),
-			kind: 'position',
-			name: 'Closed guard',
-			notes: 'Legs locked around the waist.',
-			media: source.media,
-			libraryId: source.id,
-		});
-		expect(doc.layout[nid('n')]).toEqual({ x: 1, y: 2 });
-	});
-	it('does not share media with the technique', () => {
-		const source = technique();
-		const doc = ok(armDragDoc(), { type: 'addLibraryNode', id: nid('n'), technique: source });
-		source.media.push({ provider: 'web', title: 'Later', url: 'https://example.com/later' });
-		if (source.media[0]) source.media[0].title = 'Changed';
-		expect(doc.nodes[nid('n')]?.media).toEqual([
-			{ provider: 'web', title: 'Notes', url: 'https://example.com/guard' },
-		]);
-	});
-	it('refuses a duplicate id', () => {
-		refused(armDragDoc(), { type: 'addLibraryNode', id: nid('triangle'), technique: technique() });
-	});
-});
-
-describe('linkLibrary', () => {
-	it('sets libraryId and nothing else', () => {
-		const before = armDragDoc();
-		const doc = ok(before, { type: 'linkLibrary', id: nid('triangle'), libraryId: LibraryTechniqueIdSchema.parse('lib-1') });
-		expect(doc.nodes[nid('triangle')]).toEqual({ ...before.nodes[nid('triangle')], libraryId: 'lib-1' });
-		expect(doc.nodes[nid('arm-drag')]).toEqual(before.nodes[nid('arm-drag')]);
-	});
-	it('refuses an unknown node', () => {
-		refused(armDragDoc(), { type: 'linkLibrary', id: nid('ghost'), libraryId: LibraryTechniqueIdSchema.parse('lib-1') });
-	});
-});
-
 describe('addNode', () => {
 	it('adds a node and layout entry', () => {
-		const doc = ok(armDragDoc(), { type: 'addNode', id: nid('n'), kind: 'position', name: 'Mount', at: { x: 5, y: 6 } });
+		const doc = ok(armDragDoc(), { type: 'addNode', id: nid('n'), name: 'Mount', at: { x: 5, y: 6 } });
 		expect(doc.nodes[nid('n')]?.name).toBe('Mount');
 		expect(doc.layout[nid('n')]).toEqual({ x: 5, y: 6 });
 	});
 	it('adds without layout', () => {
-		const doc = ok(armDragDoc(), { type: 'addNode', id: nid('n'), kind: 'technique', name: 'X' });
+		const doc = ok(armDragDoc(), { type: 'addNode', id: nid('n'), name: 'X' });
 		expect(doc.layout[nid('n')]).toBeUndefined();
 	});
 	it('refuses a duplicate id', () => {
-		refused(armDragDoc(), { type: 'addNode', id: nid('triangle'), kind: 'technique', name: 'X' });
+		refused(armDragDoc(), { type: 'addNode', id: nid('triangle'), name: 'X' });
 	});
 	it('bumps updatedAt', () => {
 		const before = armDragDoc();
-		const after = ok(before, { type: 'addNode', id: nid('n'), kind: 'technique', name: 'X' });
+		const after = ok(before, { type: 'addNode', id: nid('n'), name: 'X' });
 		expect(after.updatedAt).not.toBe(before.updatedAt);
 	});
 });
 
 describe('updateNode', () => {
-	it('edits name, kind, notes', () => {
+	it('edits name and notes', () => {
 		const doc = ok(armDragDoc(), {
 			type: 'updateNode',
 			id: nid('back-take'),
-			patch: { name: 'Back', kind: 'position', notes: 'hooks' },
+			patch: { name: 'Back', notes: 'hooks' },
 		});
-		expect(doc.nodes[nid('back-take')]).toMatchObject({ name: 'Back', kind: 'position', notes: 'hooks' });
+		expect(doc.nodes[nid('back-take')]).toMatchObject({ name: 'Back', notes: 'hooks' });
 	});
 	it('refuses an unknown node', () => {
 		refused(armDragDoc(), { type: 'updateNode', id: nid('ghost'), patch: { name: 'x' } });
-	});
-	it('refuses changing the root away from position', () => {
-		refused(armDragDoc(), { type: 'updateNode', id: nid('open-guard'), patch: { kind: 'technique' } });
 	});
 	it('allows renaming the root', () => {
 		ok(armDragDoc(), { type: 'updateNode', id: nid('open-guard'), patch: { name: 'Butterfly' } });
@@ -153,7 +77,9 @@ describe('deleteNode', () => {
 		expect(Object.keys(doc.edges).sort()).toEqual(['e1', 'e2']);
 	});
 	it('refuses the root', () => {
-		refused(armDragDoc(), { type: 'deleteNode', id: nid('open-guard') });
+		expect(refused(armDragDoc(), { type: 'deleteNode', id: nid('open-guard') })).toBe(
+			'The start node cannot be deleted. Set another node as the start first.',
+		);
 	});
 	it('refuses an unknown node', () => {
 		refused(armDragDoc(), { type: 'deleteNode', id: nid('ghost') });
@@ -161,60 +87,43 @@ describe('deleteNode', () => {
 });
 
 describe('connect', () => {
-	it('creates a me edge, allows cycles and parallel edges', () => {
+	it('creates an edge with a trimmed label, allows cycles and parallel edges', () => {
 		let doc = ok(armDragDoc(), {
-			type: 'connect', id: eid('c1'), from: nid('back-take'), to: nid('open-guard'),
-			move: { actor: 'me', label: '  ' },
+			type: 'connect', id: eid('c1'), from: nid('back-take'), to: nid('open-guard'), label: '  ',
 		});
-		expect(doc.edges[eid('c1')]?.label).toBe('');
+		expect(doc.edges[eid('c1')]).toEqual({
+			id: 'c1', from: 'back-take', to: 'open-guard', label: '', notes: '', media: [],
+		});
 		doc = ok(doc, {
-			type: 'connect', id: eid('c2'), from: nid('arm-drag'), to: nid('triangle'),
-			move: { actor: 'opponent', label: reaction('Another') },
+			type: 'connect', id: eid('c2'), from: nid('arm-drag'), to: nid('triangle'), label: ' Another ',
 		});
+		expect(doc.edges[eid('c2')]?.label).toBe('Another');
 		expect(Object.keys(doc.edges)).toHaveLength(5);
 	});
 	it('refuses self-loops', () => {
-		refused(armDragDoc(), {
-			type: 'connect', id: eid('c'), from: nid('triangle'), to: nid('triangle'),
-			move: { actor: 'me', label: '' },
-		});
+		refused(armDragDoc(), { type: 'connect', id: eid('c'), from: nid('triangle'), to: nid('triangle'), label: '' });
 	});
 	it('refuses unknown nodes', () => {
-		refused(armDragDoc(), {
-			type: 'connect', id: eid('c'), from: nid('ghost'), to: nid('triangle'),
-			move: { actor: 'me', label: '' },
-		});
-		refused(armDragDoc(), {
-			type: 'connect', id: eid('c'), from: nid('triangle'), to: nid('ghost'),
-			move: { actor: 'me', label: '' },
-		});
+		refused(armDragDoc(), { type: 'connect', id: eid('c'), from: nid('ghost'), to: nid('triangle'), label: '' });
+		refused(armDragDoc(), { type: 'connect', id: eid('c'), from: nid('triangle'), to: nid('ghost'), label: '' });
 	});
 	it('refuses a duplicate edge id', () => {
-		refused(armDragDoc(), {
-			type: 'connect', id: eid('e1'), from: nid('triangle'), to: nid('open-guard'),
-			move: { actor: 'me', label: '' },
-		});
+		refused(armDragDoc(), { type: 'connect', id: eid('e1'), from: nid('triangle'), to: nid('open-guard'), label: '' });
 	});
 });
 
 describe('updateEdge', () => {
 	it('edits label and notes', () => {
 		const doc = ok(armDragDoc(), { type: 'updateEdge', id: eid('e2'), patch: { label: ' New ', notes: 'n' } });
-		expect(doc.edges[eid('e2')]).toMatchObject({ label: 'New', notes: 'n', actor: 'opponent' });
+		expect(doc.edges[eid('e2')]).toMatchObject({ label: 'New', notes: 'n' });
 	});
-	it('switches actor to me and keeps label', () => {
-		const doc = ok(armDragDoc(), { type: 'updateEdge', id: eid('e2'), patch: { actor: 'me' } });
-		expect(doc.edges[eid('e2')]?.actor).toBe('me');
+	it('allows clearing the label', () => {
+		const doc = ok(armDragDoc(), { type: 'updateEdge', id: eid('e2'), patch: { label: '' } });
+		expect(doc.edges[eid('e2')]?.label).toBe('');
 	});
-	it('refuses opponent with a blank label', () => {
-		refused(armDragDoc(), { type: 'updateEdge', id: eid('e2'), patch: { label: '  ' } });
-	});
-	it('refuses switching to opponent while the label is blank', () => {
-		refused(armDragDoc(), { type: 'updateEdge', id: eid('e1'), patch: { actor: 'opponent' } });
-	});
-	it('switches to opponent when a label is provided', () => {
-		const doc = ok(armDragDoc(), { type: 'updateEdge', id: eid('e1'), patch: { actor: 'opponent', label: 'Posts' } });
-		expect(doc.edges[eid('e1')]?.actor).toBe('opponent');
+	it('keeps the label when only notes change', () => {
+		const doc = ok(armDragDoc(), { type: 'updateEdge', id: eid('e2'), patch: { notes: 'n' } });
+		expect(doc.edges[eid('e2')]?.label).toBe('Arm stays displaced');
 	});
 	it('refuses an unknown edge', () => {
 		refused(armDragDoc(), { type: 'updateEdge', id: eid('ghost'), patch: { notes: 'x' } });
@@ -243,14 +152,15 @@ describe('moveNode', () => {
 });
 
 describe('setRoot', () => {
-	it('moves the root to another position', () => {
-		let doc = ok(armDragDoc(), { type: 'addNode', id: nid('p2'), kind: 'position', name: 'Back control' });
+	it('moves the root to another node', () => {
+		let doc = ok(armDragDoc(), { type: 'addNode', id: nid('p2'), name: 'Back control' });
 		doc = ok(doc, { type: 'setRoot', id: nid('p2') });
 		expect(doc.rootNodeId).toBe('p2');
 		ok(doc, { type: 'deleteNode', id: nid('open-guard') });
 	});
-	it('refuses a non-position', () => {
-		refused(armDragDoc(), { type: 'setRoot', id: nid('triangle') });
+	it('allows any existing node as the start', () => {
+		const doc = ok(armDragDoc(), { type: 'setRoot', id: nid('triangle') });
+		expect(doc.rootNodeId).toBe('triangle');
 	});
 	it('refuses an unknown node', () => {
 		refused(armDragDoc(), { type: 'setRoot', id: nid('ghost') });
@@ -290,7 +200,6 @@ describe('media commands', () => {
 		doc = ok(doc, { type: 'addMedia', owner: onEdge, media: second });
 		doc = ok(doc, { type: 'updateMediaTitle', owner: onEdge, index: 0, title: 'Drill' });
 		expect(doc.edges[eid('e2')]?.media).toEqual([{ ...link, title: 'Drill' }, second]);
-		expect(doc.edges[eid('e2')]?.actor).toBe('opponent');
 	});
 	it('refuses updateMediaTitle for an unknown owner or bad index', () => {
 		const doc = ok(armDragDoc(), { type: 'addMedia', owner: onNode, media: link });

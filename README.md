@@ -1,6 +1,6 @@
 # Arbor
 
-Arbor maps Brazilian Jiu-Jitsu strategies as decision graphs. You start from a position, add the techniques you attempt, and branch on how your opponent reacts. Each branch leads to your next option, and you can keep going until a line ends in a submission.
+Arbor maps Brazilian Jiu-Jitsu strategies as decision graphs. You start from a situation, add what you try next, and branch on how your opponent reacts. Each branch leads to your next option, and you can keep going until a line ends.
 
 A strategy is one person's game plan, not a rule about the correct response. The long-term goal is a community site where people publish their strategies, study each other's, and fork them into their own versions.
 
@@ -10,16 +10,15 @@ Early. The editor works and saves to your browser. There are no accounts, no ser
 
 What works today:
 
-- Create a strategy with a starting position, a ruleset (gi, no-gi, or both), and a starting side (top, bottom, or standing).
-- Add positions, techniques, and submissions to a canvas you can pan and zoom.
-- Pick a technique from a small seed library, or make your own. A picked technique copies its kind, name, and description into a new node, so later library changes never alter your strategy.
-- Add your own positions, techniques, and submissions to the library, either from the picker or from a node with "Save to library". Your entries are stored in this browser next to the seed library. Editing or deleting a library entry never changes nodes already placed.
-- Connect nodes. Every connection says who moves: you, or your opponent. An opponent connection needs a label that describes the reaction.
-- Edit names, kinds, and plain-text notes in the side panel. Drag nodes to arrange them. Delete nodes and connections.
+- Create a strategy with a starting node, a ruleset (gi, no-gi, or both), and a starting side (top, bottom, or standing).
+- Add nodes to a canvas you can pan and zoom. A node is a situation or a move, and you name it however you like.
+- Connect nodes by dragging from one to the next. A connection can carry a label that records how your opponent reacts.
+- Edit names, labels, and plain-text notes in the side panel. Drag nodes to arrange them. Delete nodes and connections.
 - Attach media to any node or connection. YouTube links show a thumbnail and play in the side panel, starting at the link's timestamp. Instagram and other links open in a new tab.
 - Record or upload your own clips. On a phone, "Record clip" opens the camera. Clips are stored in your browser's IndexedDB, so they stay on the device that added them unless you export the strategy.
 - Export a strategy from the editor as an `.arbor.json` file and import it from the list screen. Clips travel inside the file. Importing a strategy that already exists in this browser asks before replacing it.
 - Close the browser and come back. Strategies save to `localStorage` after every change.
+- Strategies saved in the older format, and files exported from them, still open. Their node types and who-moves settings are dropped, and their labels are kept.
 
 ## Run it
 
@@ -39,16 +38,15 @@ Open the address Vite prints. Other scripts:
 
 A strategy is a graph, not a tree, because BJJ sequences loop back to positions you have already been in.
 
-- A **node** is something you are in or something you do: a `position`, a `technique`, or a `submission`. A node with nothing after it is where that line ends.
-- An **edge** is a move from one node to the next. Its `actor` is `me` or `opponent`. Opponent edges need a label, because that label is the reaction you choose between when you study the strategy.
-- A **strategy** is one JSON document. It holds its nodes, its edges, and a separate `layout` map of node positions, so where a node sits on the canvas never changes what it means.
+- A **node** is a situation or a move that you name freely, such as "Collar tie with inside control" or "Arm drag". A node with nothing after it is where that line ends.
+- A **connection** leads from one node to the next. Its optional label records your opponent's reaction. For example, "Collar tie with inside control" leads to "Arm drag" with the label "He circles his arm in and regains control".
+- A **strategy** is one JSON document. It holds its nodes, its connections, and a separate `layout` map of node positions, so where a node sits on the canvas never changes what it means.
 
-Loading a strategy runs it through a [zod](https://zod.dev) schema and a few rules the schema cannot express. For example, the starting node must be a position, and every edge must connect two existing nodes. After that check, the rest of the app trusts the data.
+Loading a strategy runs it through a [zod](https://zod.dev) schema and a few rules the schema cannot express. For example, the starting node must exist, and every connection must join two different existing nodes. After that check, the rest of the app trusts the data.
 
 ## Project layout
 
 - `src/model/strategy.ts` defines the strategy schema and types, the load-time checks, and `createStrategy`.
-- `src/model/library.json` is the seed technique library. `src/model/library.ts` checks it on load and searches it.
 - `src/model/commands.ts` defines every edit as a command. `apply` is the only function that changes a strategy, and it explains any change it refuses.
 - `src/model/exchange.ts` defines the export file format and decides what an import should do. `src/exchange.ts` reads clips and writes the file.
 - `src/storage.ts` saves and loads strategies in `localStorage`.
