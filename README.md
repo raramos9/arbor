@@ -17,7 +17,8 @@ What works today:
 - Connect nodes. Every connection says who moves: you, or your opponent. An opponent connection needs a label that describes the reaction.
 - Edit names, kinds, and plain-text notes in the side panel. Drag nodes to arrange them. Delete nodes and connections.
 - Attach media to any node or connection. YouTube links show a thumbnail and play in the side panel, starting at the link's timestamp. Instagram and other links open in a new tab.
-- Record or upload your own clips. On a phone, "Record clip" opens the camera. Clips are stored in your browser's IndexedDB, so they stay on the device that added them and are not backed up.
+- Record or upload your own clips. On a phone, "Record clip" opens the camera. Clips are stored in your browser's IndexedDB, so they stay on the device that added them unless you export the strategy.
+- Export a strategy from the editor as an `.arbor.json` file and import it from the list screen. Clips travel inside the file. Importing a strategy that already exists in this browser asks before replacing it.
 - Close the browser and come back. Strategies save to `localStorage` after every change.
 
 ## Run it
@@ -49,6 +50,7 @@ Loading a strategy runs it through a [zod](https://zod.dev) schema and a few rul
 - `src/model/strategy.ts` defines the strategy schema and types, the load-time checks, and `createStrategy`.
 - `src/model/library.json` is the seed technique library. `src/model/library.ts` checks it on load and searches it.
 - `src/model/commands.ts` defines every edit as a command. `apply` is the only function that changes a strategy, and it explains any change it refuses.
+- `src/model/exchange.ts` defines the export file format and decides what an import should do. `src/exchange.ts` reads clips and writes the file.
 - `src/storage.ts` saves and loads strategies in `localStorage`.
 - `src/ui/` holds the list screen, the editor, and the side panel. `src/ui/flow.ts` is the only file that converts between a strategy and the node and edge lists React Flow expects.
 
@@ -66,7 +68,6 @@ There is no backend yet. Postgres and accounts arrive when strategies need to le
 The first milestone finishes the single-user experience:
 
 1. Study mode: walk a strategy one decision at a time, choosing your options and your opponent's reactions.
-2. Export and import strategies as JSON files.
 
 After that:
 
