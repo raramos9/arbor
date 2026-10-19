@@ -64,6 +64,33 @@ function overlaps(a: Rect, b: Rect): boolean {
 	return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 }
 
+const LABEL_CHAR_WIDTH = 8;
+const LABEL_PADDING = 16;
+const LABEL_HEIGHT = 32;
+
+function nodeRect(node: StrategyFlowNode): Rect {
+	return {
+		x: node.position.x,
+		y: node.position.y,
+		width: node.measured?.width ?? NODE_SIZE.width,
+		height: node.measured?.height ?? NODE_SIZE.height,
+	};
+}
+
+export function occupiedRects(nodes: readonly StrategyFlowNode[], edges: readonly Edge[]): Rect[] {
+	const rects = new Map(nodes.map((node) => [node.id, nodeRect(node)]));
+	const labels = edges.flatMap((edge) => {
+		const from = rects.get(edge.source);
+		const to = rects.get(edge.target);
+		if (!from || !to || typeof edge.label !== 'string' || edge.label === '') return [];
+		const width = edge.label.length * LABEL_CHAR_WIDTH + LABEL_PADDING;
+		const centerX = (from.x + from.width / 2 + to.x + to.width / 2) / 2;
+		const centerY = (from.y + from.height + to.y) / 2;
+		return [{ x: centerX - width / 2, y: centerY - LABEL_HEIGHT / 2, width, height: LABEL_HEIGHT }];
+	});
+	return [...rects.values(), ...labels];
+}
+
 export function findFreeSpot(candidate: Point, occupied: readonly Rect[]): Point {
 	let spot = candidate;
 	while (occupied.some((rect) => overlaps({ ...spot, ...NODE_SIZE }, rect))) {

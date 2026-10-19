@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EdgeIdSchema, NodeIdSchema, type Media } from '../model/strategy';
-import { edgeLabel, findFreeSpot, isInside, NODE_SIZE } from './flow';
+import type { Edge } from '@xyflow/react';
+import { edgeLabel, findFreeSpot, isInside, NODE_SIZE, occupiedRects, type StrategyFlowNode } from './flow';
 
 describe('findFreeSpot', () => {
 	it('returns the candidate on an empty canvas', () => {
@@ -18,6 +19,27 @@ describe('findFreeSpot', () => {
 
 	it('ignores nodes that do not overlap', () => {
 		expect(findFreeSpot({ x: 0, y: 0 }, [{ x: 500, y: 0, ...NODE_SIZE }])).toEqual({ x: 0, y: 0 });
+	});
+});
+
+describe('occupiedRects', () => {
+	const node = (id: string, y: number): StrategyFlowNode => ({
+		id,
+		type: 'strategy',
+		position: { x: 0, y },
+		data: { name: id, isRoot: false, mediaCount: 0 },
+	});
+	const nodes = [node('a', 0), node('b', 300)];
+	const edge = (label: string): Edge => ({ id: 'e', source: 'a', target: 'b', label });
+
+	it('keeps a new node below a connected node off the label', () => {
+		const label = { x: 0, y: (NODE_SIZE.height + 300) / 2, width: 1, height: 1 };
+		const spot = findFreeSpot({ x: 0, y: 140 }, occupiedRects(nodes, [edge('He circles his arm in')]));
+		expect(isInside(label, { ...spot, ...NODE_SIZE })).toBe(false);
+	});
+
+	it('reserves nothing for an unlabeled connection', () => {
+		expect(occupiedRects(nodes, [edge('')])).toHaveLength(2);
 	});
 });
 
