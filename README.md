@@ -6,7 +6,7 @@ A strategy is one person's game plan, not a rule about the correct response. The
 
 ## Status
 
-Early. The editor works and saves to your browser. There are no accounts, no server, and no sharing yet.
+Early. The editor works and saves to your browser. Accounts and sharing are in progress; see `docs/plans/01-accounts-and-sharing/`.
 
 What works today:
 
@@ -29,7 +29,13 @@ npm install
 npm run dev
 ```
 
-Open the address Vite prints. Other scripts:
+Open the address Vite prints.
+
+### Sharing (optional)
+
+Publishing and signing in use [Supabase](https://supabase.com). Without it, everything else works and nothing leaves your browser. To turn it on, copy `.env.example` to `.env.local` and fill in your project's URL and publishable key.
+
+Other scripts:
 
 - `npm test` runs the unit tests with Vitest.
 - `npm run build` type-checks the project and builds it into `dist/`.
@@ -50,6 +56,8 @@ Loading a strategy runs it through a [zod](https://zod.dev) schema and a few rul
 - `src/model/commands.ts` defines every edit as a command. `apply` is the only function that changes a strategy, and it explains any change it refuses.
 - `src/model/exchange.ts` defines the export file format and decides what an import should do. `src/exchange.ts` reads clips and writes the file.
 - `src/storage.ts` saves and loads strategies in `localStorage`.
+- `src/supabase.ts` creates the Supabase client, or `null` when sharing is not configured.
+- `supabase/` holds the Supabase configuration and database migrations.
 - `src/ui/` holds the list screen, the editor, and the side panel. `src/ui/flow.ts` is the only file that converts between a strategy and the node and edge lists React Flow expects.
 
 ## Stack
