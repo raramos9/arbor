@@ -93,8 +93,8 @@ export function mediaLabel(media: Media): string {
 	}
 }
 
-export function unreferencedClips(docs: readonly StrategyDoc[], clipIds: readonly ClipId[]): ClipId[] {
-	const referenced = new Set<string>();
+export function referencedClipIds(docs: readonly StrategyDoc[]): Set<ClipId> {
+	const referenced = new Set<ClipId>();
 	for (const doc of docs) {
 		for (const owner of [...Object.values(doc.nodes), ...Object.values(doc.edges)]) {
 			for (const item of owner.media) {
@@ -102,6 +102,11 @@ export function unreferencedClips(docs: readonly StrategyDoc[], clipIds: readonl
 			}
 		}
 	}
+	return referenced;
+}
+
+export function unreferencedClips(docs: readonly StrategyDoc[], clipIds: readonly ClipId[]): ClipId[] {
+	const referenced = referencedClipIds(docs);
 	return clipIds.filter((id) => !referenced.has(id));
 }
 

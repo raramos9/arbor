@@ -28,6 +28,14 @@ export function listStrategies(): StoredStrategy[] {
 	});
 }
 
+export function hasStrategy(id: string): boolean {
+	try {
+		return localStorage.getItem(PREFIX + id) !== null;
+	} catch {
+		return false;
+	}
+}
+
 export function loadStrategy(id: string): Result<StrategyDoc> {
 	let raw: string | null;
 	try {
