@@ -21,6 +21,7 @@ import { loadStrategy } from '../storage';
 import {
 	NODE_SIZE,
 	findFreeSpot,
+	occupiedRects,
 	isInside,
 	toFlowEdges,
 	toFlowNodes,
@@ -146,15 +147,7 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 				: { x: 0, y: 0 };
 			candidate = { x: center.x - NODE_SIZE.width / 2, y: center.y - NODE_SIZE.height / 2 };
 		}
-		const at = findFreeSpot(
-			candidate,
-			nodes.map((n) => ({
-				x: n.position.x,
-				y: n.position.y,
-				width: n.measured?.width ?? NODE_SIZE.width,
-				height: n.measured?.height ?? NODE_SIZE.height,
-			})),
-		);
+		const at = findFreeSpot(candidate, occupiedRects(nodes, edges));
 		const nodeId = newNodeId();
 		const result = exec(create(nodeId, at));
 		if (result.ok) {
