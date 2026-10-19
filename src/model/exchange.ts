@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { referencedClipIds } from './media';
-import { ClipIdSchema, parseStrategy, type Result, type StrategyDoc } from './strategy';
+import { ClipIdSchema, parseStrategy, type ClipId, type Result, type StrategyDoc } from './strategy';
 
 const EncodedBlobSchema = z.object({ type: z.string(), base64: z.string() });
 
@@ -47,6 +47,10 @@ export function parseArborFile(text: string): Result<ArborFile> {
 			clips: parsed.data.clips.filter((clip) => referenced.has(clip.id)),
 		},
 	};
+}
+
+export function clipsToSave(file: ArborFile, existing: readonly ClipId[]): ExportedClip[] {
+	return file.clips.filter((clip) => !existing.includes(clip.id));
 }
 
 export function planImport(incoming: StrategyDoc, existing: Result<StrategyDoc> | null): ImportPlan {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { exportFileName, parseArborFile, planImport } from './exchange';
+import { clipsToSave, exportFileName, parseArborFile, planImport } from './exchange';
 import { armDragDoc } from './fixtures';
 import { ClipIdSchema, NodeIdSchema, type StrategyDoc } from './strategy';
 
@@ -95,5 +95,14 @@ describe('exportFileName', () => {
 		const doc = armDragDoc();
 		doc.title = '  !!! ';
 		expect(exportFileName(doc)).toBe('strategy.arbor.json');
+	});
+});
+
+describe('clipsToSave', () => {
+	it('never overwrites a clip that already exists on this device', () => {
+		const result = parseArborFile(fileText());
+		if (!result.ok) throw new Error(result.error);
+		expect(clipsToSave(result.value, [keep])).toEqual([]);
+		expect(clipsToSave(result.value, [stray])).toEqual([clip('keep')]);
 	});
 });

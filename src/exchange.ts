@@ -1,5 +1,5 @@
-import { getClip, saveClip } from './clips';
-import { parseArborFile, type ArborFile, type ExportedClip } from './model/exchange';
+import { getClip, listClipIds, saveClip } from './clips';
+import { clipsToSave, parseArborFile, type ArborFile, type ExportedClip } from './model/exchange';
 import { referencedClipIds } from './model/media';
 import type { Result, StrategyDoc } from './model/strategy';
 import { saveStrategy } from './storage';
@@ -59,8 +59,10 @@ export async function readArborFile(file: File): Promise<Result<ArborFile>> {
 }
 
 export async function importStrategy(file: ArborFile): Promise<Result<null>> {
+	const existing = await listClipIds();
+	if (!existing.ok) return existing;
 	try {
-		for (const clip of file.clips) {
+		for (const clip of clipsToSave(file, existing.value)) {
 			const saved = await saveClip({
 				id: clip.id,
 				createdAt: clip.createdAt,
