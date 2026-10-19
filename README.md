@@ -6,7 +6,7 @@ A strategy is one person's game plan, not a rule about the correct response. The
 
 ## Status
 
-Early. The editor works and saves to your browser. Accounts and sharing are in progress; see `docs/plans/01-accounts-and-sharing/`.
+Early. The editor works and saves to your browser. Accounts and sharing are in progress.
 
 What works today:
 
