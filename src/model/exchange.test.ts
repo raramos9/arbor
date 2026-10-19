@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { clipsToSave, exportFileName, parseArborFile, planImport } from './exchange';
-import { armDragDoc } from './fixtures';
+import { armDragDoc, armDragInput } from './fixtures';
 import { ClipIdSchema, NodeIdSchema, type StrategyDoc } from './strategy';
 
 const keep = ClipIdSchema.parse('keep');
@@ -35,6 +35,23 @@ describe('parseArborFile', () => {
 		if (!result.ok) return;
 		expect(result.value.strategy).toEqual(doc);
 		expect(result.value.clips).toEqual([clip('keep')]);
+	});
+
+	it('opens a v1 export, keeping labels and dropping retired fields', () => {
+		const v1 = {
+			...armDragInput,
+			schemaVersion: 1,
+			nodes: Object.fromEntries(
+				Object.entries(armDragInput.nodes).map(([key, node]) => [key, { ...node, kind: 'technique', libraryId: null }]),
+			),
+			edges: { e2: { ...armDragInput.edges.e2, actor: 'opponent' } },
+		};
+		const result = parseArborFile(fileText({}, v1));
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		expect(result.value.strategy.schemaVersion).toBe(2);
+		expect(result.value.strategy.edges['e2']?.label).toBe('Arm stays displaced');
+		expect(result.value.strategy.nodes['arm-drag']).toEqual(armDragDoc().nodes[NodeIdSchema.parse('arm-drag')]);
 	});
 
 	it('rejects the wrong format', () => {

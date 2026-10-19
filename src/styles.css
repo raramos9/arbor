@@ -6,12 +6,6 @@
   --muted: #74746c;
   --accent: #2f5fd0;
   --danger: #b3261e;
-  --position: #e3ecff;
-  --position-border: #2f5fd0;
-  --technique: #fff6dc;
-  --technique-border: #b58a12;
-  --submission: #ffe3e0;
-  --submission-border: #b3261e;
 }
 
 * { box-sizing: border-box; }
@@ -124,14 +118,11 @@ input, select, textarea {
   min-width: 140px;
   max-width: 220px;
   padding: 8px 12px;
-  border: 2px solid;
+  border: 2px solid var(--border);
   border-radius: 8px;
   background: var(--panel);
 }
-.node-position { background: var(--position); border-color: var(--position-border); border-radius: 18px; }
-.node-technique { background: var(--technique); border-color: var(--technique-border); }
-.node-submission { background: var(--submission); border-color: var(--submission-border); border-style: double; border-width: 4px; }
-.node.root { box-shadow: 0 0 0 3px rgba(47, 95, 208, 0.35); }
+.node.root { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(47, 95, 208, 0.35); }
 .node.selected { outline: 2px solid var(--text); outline-offset: 2px; }
 .node-meta {
   display: flex;
@@ -142,10 +133,9 @@ input, select, textarea {
   letter-spacing: 0.06em;
   color: var(--muted);
 }
-.root-badge { font-weight: 700; color: var(--position-border); }
+.root-badge { font-weight: 700; color: var(--accent); }
 .node-name { font-weight: 600; overflow-wrap: anywhere; }
 
-.react-flow__edge.edge-opponent .react-flow__edge-path { stroke-dasharray: 6 4; }
 .react-flow__edge-text { font-size: 12px; }
 
 .backdrop {
@@ -233,17 +223,6 @@ input, select, textarea {
   color: #fff;
   font-size: 12px;
 }
-
-.library-dialog { width: 420px; max-width: calc(100vw - 32px); }
-.library-results { max-height: 50vh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-.library-results section { display: flex; flex-direction: column; gap: 4px; }
-.library-results h3 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
-.library-row { text-align: left; }
-.library-entry { display: flex; align-items: center; gap: 6px; }
-.library-entry .library-row { flex: 1; min-width: 0; }
-.library-tag { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
-.library-confirm { flex: 1; font-weight: 600; overflow-wrap: anywhere; }
-.library-results > button { align-self: flex-start; }
 
 .confirm { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); }
 .confirm p { margin: 0; }

@@ -39,12 +39,12 @@ describe('edgeLabel', () => {
 	const clip: Media = { provider: 'web', title: '', url: 'https://example.com' };
 
 	it('leaves the label alone without media', () => {
-		expect(edgeLabel({ ...base, actor: 'me', label: 'Sweep', media: [] })).toBe('Sweep');
+		expect(edgeLabel({ ...base, label: 'Sweep', media: [] })).toBe('Sweep');
 	});
 	it('appends a marker when media exists', () => {
-		expect(edgeLabel({ ...base, actor: 'me', label: 'Sweep', media: [clip] })).toBe('Sweep ▶');
+		expect(edgeLabel({ ...base, label: 'Sweep', media: [clip] })).toBe('Sweep ▶');
 	});
 	it('shows only the marker for an empty label', () => {
-		expect(edgeLabel({ ...base, actor: 'me', label: '', media: [clip] })).toBe('▶');
+		expect(edgeLabel({ ...base, label: '', media: [clip] })).toBe('▶');
 	});
 });

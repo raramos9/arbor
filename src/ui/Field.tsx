@@ -6,9 +6,10 @@ type Props = {
 	onChange: (value: string) => void;
 	multiline?: boolean;
 	autoFocus?: boolean;
+	placeholder?: string;
 };
 
-export function Field({ label, value, onChange, multiline, autoFocus }: Props) {
+export function Field({ label, value, onChange, multiline, autoFocus, placeholder }: Props) {
 	const [draft, setDraft] = useState(value);
 	const shared = {
 		value: draft,
@@ -22,10 +23,11 @@ export function Field({ label, value, onChange, multiline, autoFocus }: Props) {
 		<label>
 			{label}
 			{multiline ? (
-				<textarea rows={6} {...shared} />
+				<textarea rows={6} placeholder={placeholder} {...shared} />
 			) : (
 				<input
 					{...shared}
+					placeholder={placeholder}
 					autoFocus={autoFocus}
 					onFocus={autoFocus ? (e) => e.target.select() : undefined}
 				/>

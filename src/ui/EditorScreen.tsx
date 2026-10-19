@@ -11,17 +11,13 @@ import {
 import { exportStrategy } from '../exchange';
 import { exportFileName } from '../model/exchange';
 import type { ApplyResult, Command } from '../model/commands';
-import type { LibraryTechnique } from '../model/library';
 import {
 	newEdgeId,
 	newNodeId,
 	type NodeId,
-	type NodeKind,
 	type StrategyDoc,
-	type StrategyNode,
 } from '../model/strategy';
 import { loadStrategy } from '../storage';
-import { ConnectDialog } from './ConnectDialog';
 import {
 	NODE_SIZE,
 	findFreeSpot,
@@ -34,16 +30,12 @@ import {
 	type StrategyFlowNode,
 } from './flow';
 import { Inspector } from './Inspector';
-import { LibraryDialog } from './LibraryDialog';
 import { StrategyNodeView } from './StrategyNodeView';
 import { useEditor } from './useEditor';
-import { useMyLibrary } from './useMyLibrary';
 
 const nodeTypes = { strategy: StrategyNodeView };
 
 const SELECTED_NODE_GAP = 140;
-
-const KINDS: readonly NodeKind[] = ['position', 'technique', 'submission'];
 
 function download(blob: Blob, fileName: string) {
 	const url = URL.createObjectURL(blob);
@@ -81,18 +73,13 @@ function isEditable(target: EventTarget | null): boolean {
 	return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
 }
 
-type Pending = { from: StrategyNode; to: StrategyNode };
-
 function Editor({ initial }: { initial: StrategyDoc }) {
 	const { doc, run, persist, saveError } = useEditor(initial);
-	const library = useMyLibrary();
 	const { screenToFlowPosition, setCenter, getZoom } = useReactFlow();
 	const canvasRef = useRef<HTMLDivElement>(null);
 	const [selection, setSelection] = useState<Selection>(null);
 	const [error, setError] = useState<string | null>(null);
-	const [focusName, setFocusName] = useState(false);
-	const [pending, setPending] = useState<Pending | null>(null);
-	const [pickingLibrary, setPickingLibrary] = useState(false);
+	const [focusField, setFocusField] = useState(false);
 	const [exporting, setExporting] = useState(false);
 	const [exportError, setExportError] = useState<string | null>(null);
 	const [measured, setMeasured] = useState<Record<string, Size>>({});
@@ -120,7 +107,7 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 
 	function select(next: Selection) {
 		setSelection(next);
-		setFocusName(false);
+		setFocusField(false);
 		setError(null);
 	}
 
@@ -136,15 +123,8 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 	const deleteRef = useRef(deleteSelection);
 	deleteRef.current = deleteSelection;
 
-	const pendingRef = useRef(pending);
-	pendingRef.current = pending;
-
-	const pickingLibraryRef = useRef(pickingLibrary);
-	pickingLibraryRef.current = pickingLibrary;
-
 	useEffect(() => {
 		const onKey = (e: KeyboardEvent) => {
-			if (pendingRef.current || pickingLibraryRef.current) return;
 			if (e.key !== 'Delete' && e.key !== 'Backspace') return;
 			if (isEditable(e.target)) return;
 			e.preventDefault();
@@ -179,18 +159,13 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 		const result = exec(create(nodeId, at));
 		if (result.ok) {
 			setSelection({ type: 'node', id: nodeId });
-			setFocusName(true);
+			setFocusField(true);
 			revealNode(at);
 		}
 	}
 
-	function addNode(kind: NodeKind) {
-		placeNode((id, at) => ({ type: 'addNode', id, kind, name: `New ${kind}`, at }));
-	}
-
-	function addLibraryNode(technique: LibraryTechnique) {
-		setPickingLibrary(false);
-		placeNode((id, at) => ({ type: 'addLibraryNode', id, technique, at }));
+	function addNode() {
+		placeNode((id, at) => ({ type: 'addNode', id, name: 'New node', at }));
 	}
 
 	function revealNode(at: Point) {
@@ -226,17 +201,12 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 	function onConnect(connection: Connection) {
 		const from = doc.nodes[connection.source];
 		const to = doc.nodes[connection.target];
-		if (from && to) setPending({ from, to });
-	}
-
-	function createEdge(move: Extract<Command, { type: 'connect' }>['move']): string | null {
-		if (!pending) return null;
+		if (!from || !to) return;
 		const edgeId = newEdgeId();
-		const result = exec({ type: 'connect', id: edgeId, from: pending.from.id, to: pending.to.id, move });
-		if (!result.ok) return result.reason;
-		setPending(null);
-		select({ type: 'edge', id: edgeId });
-		return null;
+		const result = exec({ type: 'connect', id: edgeId, from: from.id, to: to.id, label: '' });
+		if (!result.ok) return;
+		setSelection({ type: 'edge', id: edgeId });
+		setFocusField(true);
 	}
 
 	return (
@@ -253,12 +223,7 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 			<div className="editor">
 				<div className="canvas" ref={canvasRef}>
 					<div className="toolbar">
-						{KINDS.map((kind) => (
-							<button key={kind} onClick={() => addNode(kind)}>
-								Add {kind}
-							</button>
-						))}
-						<button onClick={() => setPickingLibrary(true)}>From library</button>
+						<button onClick={addNode}>Add node</button>
 					</div>
 					<ReactFlow
 						nodes={nodes}
@@ -290,28 +255,11 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 					doc={doc}
 					selection={selection}
 					error={error}
-					focusName={focusName}
+					focusField={focusField}
 					exec={exec}
-					library={library}
-					onError={setError}
 					onDeleted={() => select(null)}
 				/>
 			</div>
-			{pickingLibrary && (
-				<LibraryDialog
-					library={library}
-					onPick={addLibraryNode}
-					onCancel={() => setPickingLibrary(false)}
-				/>
-			)}
-			{pending && (
-				<ConnectDialog
-					from={pending.from}
-					to={pending.to}
-					onCreate={createEdge}
-					onCancel={() => setPending(null)}
-				/>
-			)}
 		</div>
 	);
 }
