@@ -1,9 +1,16 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { deleteClip, listClipIds } from '../clips';
+import { importStrategy, readArborFile } from '../exchange';
+import { planImport, type ArborFile } from '../model/exchange';
 import { unreferencedClips } from '../model/media';
 import { createStrategy, RulesetSchema, SideSchema, type Ruleset, type Side, type StrategyDoc } from '../model/strategy';
 import { editorHref, navigate } from '../route';
-import { listStrategies, saveStrategy } from '../storage';
+import { hasStrategy, listStrategies, loadStrategy, saveStrategy } from '../storage';
+
+type ImportState =
+	| { kind: 'idle' }
+	| { kind: 'confirming'; file: ArborFile; existingTitle: string | null }
+	| { kind: 'error'; message: string };
 
 async function collectClips(docs: StrategyDoc[]) {
 	const listed = await listClipIds();
@@ -18,6 +25,8 @@ export function ListScreen() {
 	const [ruleset, setRuleset] = useState<Ruleset>('both');
 	const [side, setSide] = useState<Side>('bottom');
 	const [error, setError] = useState<string | null>(null);
+	const [importState, setImportState] = useState<ImportState>({ kind: 'idle' });
+	const fileInput = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
 		const docs = entries.flatMap((entry) => (entry.ok ? [entry.doc] : []));
@@ -48,6 +57,45 @@ export function ListScreen() {
 		navigate(editorHref(doc.id));
 	}
 
+	async function runImport(file: ArborFile) {
+		const imported = await importStrategy(file);
+		if (!imported.ok) {
+			setImportState({ kind: 'error', message: imported.error });
+			return;
+		}
+		navigate(editorHref(file.strategy.id));
+	}
+
+	async function onPickFile(e: ChangeEvent<HTMLInputElement>) {
+		const picked = e.target.files?.[0];
+		if (fileInput.current) fileInput.current.value = '';
+		if (!picked) return;
+		const read = await readArborFile(picked);
+		if (!read.ok) {
+			setImportState({ kind: 'error', message: `This file is not an Arbor strategy: ${read.error}` });
+			return;
+		}
+		const incoming = read.value;
+		const existing = hasStrategy(incoming.strategy.id) ? loadStrategy(incoming.strategy.id) : null;
+		const plan = planImport(incoming.strategy, existing);
+		switch (plan.kind) {
+			case 'new':
+				setImportState({ kind: 'idle' });
+				await runImport(incoming);
+				break;
+			case 'unchanged':
+				navigate(editorHref(incoming.strategy.id));
+				break;
+			case 'replace':
+				setImportState({ kind: 'confirming', file: incoming, existingTitle: plan.existingTitle });
+				break;
+			default: {
+				const unreachable: never = plan;
+				throw new Error(String(unreachable));
+			}
+		}
+	}
+
 	return (
 		<div className="page">
 			<header className="header">
@@ -55,8 +103,46 @@ export function ListScreen() {
 			</header>
 			<main className="list-layout">
 				<section>
-					<h2>Strategies</h2>
-					{sorted.length === 0 && <p className="muted">No strategies yet. Create one to start.</p>}
+					<div className="section-head">
+						<h2>Strategies</h2>
+						<input
+							ref={fileInput}
+							type="file"
+							accept=".json,application/json"
+							hidden
+							onChange={(e) => void onPickFile(e)}
+						/>
+						<button type="button" onClick={() => fileInput.current?.click()}>
+							Import
+						</button>
+					</div>
+					{importState.kind === 'error' && <p className="error">{importState.message}</p>}
+					{importState.kind === 'confirming' && (
+						<div className="confirm">
+							<p>
+								{importState.existingTitle === null
+									? 'A strategy with this id already exists but cannot be read. Replace it with the imported file?'
+									: `“${importState.existingTitle}” already exists in this browser. Replace it with the imported file?`}
+							</p>
+							<div className="row">
+								<button type="button" onClick={() => setImportState({ kind: 'idle' })}>
+									Cancel
+								</button>
+								<button
+									type="button"
+									className="danger"
+									onClick={() => {
+										const { file } = importState;
+										setImportState({ kind: 'idle' });
+										void runImport(file);
+									}}
+								>
+									Replace
+								</button>
+							</div>
+						</div>
+					)}
+					{sorted.length === 0 && <p className="muted">No strategies yet. Create one or import a file.</p>}
 					<ul className="strategy-list">
 						{sorted.map((entry) =>
 							entry.ok ? (

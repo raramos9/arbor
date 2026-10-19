@@ -8,6 +8,8 @@ import {
 	type Connection,
 	type NodeChange,
 } from '@xyflow/react';
+import { exportStrategy } from '../exchange';
+import { exportFileName } from '../model/exchange';
 import type { ApplyResult, Command } from '../model/commands';
 import type { LibraryTechnique } from '../model/library';
 import {
@@ -42,6 +44,15 @@ const nodeTypes = { strategy: StrategyNodeView };
 const SELECTED_NODE_GAP = 140;
 
 const KINDS: readonly NodeKind[] = ['position', 'technique', 'submission'];
+
+function download(blob: Blob, fileName: string) {
+	const url = URL.createObjectURL(blob);
+	const link = document.createElement('a');
+	link.href = url;
+	link.download = fileName;
+	link.click();
+	setTimeout(() => URL.revokeObjectURL(url));
+}
 
 export function EditorScreen({ id }: { id: string }) {
 	const [loaded] = useState(() => loadStrategy(id));
@@ -82,6 +93,8 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 	const [focusName, setFocusName] = useState(false);
 	const [pending, setPending] = useState<Pending | null>(null);
 	const [pickingLibrary, setPickingLibrary] = useState(false);
+	const [exporting, setExporting] = useState(false);
+	const [exportError, setExportError] = useState<string | null>(null);
 	const [measured, setMeasured] = useState<Record<string, Size>>({});
 
 	const nodes = useMemo(() => toFlowNodes(doc, selection, measured), [doc, selection, measured]);
@@ -91,6 +104,18 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 		const result = run(cmd, opts);
 		setError(result.ok ? null : result.reason);
 		return result;
+	}
+
+	async function onExport() {
+		setExporting(true);
+		setExportError(null);
+		const exported = await exportStrategy(doc);
+		setExporting(false);
+		if (!exported.ok) {
+			setExportError(exported.error);
+			return;
+		}
+		download(exported.value, exportFileName(doc));
 	}
 
 	function select(next: Selection) {
@@ -219,7 +244,11 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 			<header className="header">
 				<a href="#/">Strategies</a>
 				<h1>{doc.title || 'Untitled'}</h1>
+				<button onClick={() => void onExport()} disabled={exporting}>
+					{exporting ? 'Exporting…' : 'Export'}
+				</button>
 				{saveError && <span className="error">{saveError}</span>}
+				{exportError && <span className="error">{exportError}</span>}
 			</header>
 			<div className="editor">
 				<div className="canvas" ref={canvasRef}>
