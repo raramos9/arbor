@@ -1,8 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import type { Database } from '../database.types';
-import { hasChanges, prepareForPublish, type PublishedId } from '../model/publishing';
-import type { StrategyDoc } from '../model/strategy';
+import { hasChanges, prepareForPublish } from '../model/publishing';
+import type { PublishedId, StrategyDoc } from '../model/strategy';
 import { findMine, publish, unpublish } from '../publishing';
 import { publishedHref } from '../route';
 import { Dialog } from './Dialog';

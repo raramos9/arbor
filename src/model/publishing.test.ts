@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { armDragDoc, armDragInput } from './fixtures';
-import { hasChanges, parseHandle, parsePublished, prepareForPublish } from './publishing';
-import { ClipIdSchema, EdgeIdSchema, NodeIdSchema, parseStrategy, type Media, type StrategyDoc } from './strategy';
+import { forkPublished, hasChanges, parseHandle, parsePublished, prepareForPublish } from './publishing';
+import {
+	ClipIdSchema,
+	EdgeIdSchema,
+	HandleSchema,
+	NodeIdSchema,
+	PublishedIdSchema,
+	parseStrategy,
+	type Media,
+	type StrategyDoc,
+} from './strategy';
 
 const publishedId = '11111111-1111-4111-8111-111111111111';
 const parentId = '22222222-2222-4222-8222-222222222222';
@@ -64,10 +73,39 @@ describe('prepareForPublish', () => {
 	});
 });
 
+const origin = { publishedId: PublishedIdSchema.parse(parentId), title: 'Original', handle: HandleSchema.parse('bo-lee') };
+
+describe('forks', () => {
+	it('prepareForPublish nulls origin', () => {
+		expect(prepareForPublish({ ...armDragDoc(), origin }).doc.origin).toBeNull();
+	});
+
+	it('hasChanges ignores origin on a fork', () => {
+		expect(hasChanges({ ...armDragDoc(), origin }, armDragDoc())).toBe(false);
+	});
+
+	it('forkPublished copies content under a new id with origin and timestamps', () => {
+		const parsed = parsePublished(row());
+		if (!parsed.ok) throw new Error(parsed.error);
+		const source = parsed.value;
+		const fork = forkPublished(source, '2026-11-01T00:00:00Z');
+		expect(fork.id).not.toBe(source.doc.id);
+		expect(fork.origin).toEqual({ publishedId: publishedId, title: source.doc.title, handle: 'ana-silva' });
+		expect(fork.createdAt).toBe('2026-11-01T00:00:00Z');
+		expect(fork.updatedAt).toBe('2026-11-01T00:00:00Z');
+		expect(fork.nodes).toEqual(source.doc.nodes);
+		expect(fork.edges).toEqual(source.doc.edges);
+		expect(fork.layout).toEqual(source.doc.layout);
+		expect(fork.rootNodeId).toBe(source.doc.rootNodeId);
+		expect(fork.title).toBe(source.doc.title);
+		expect(fork.ruleset).toBe(source.doc.ruleset);
+	});
+});
+
 const row = (overrides: Record<string, unknown> = {}) => ({
 	id: publishedId,
 	doc: structuredClone(armDragInput),
-	forked_from: null,
+	parent: null,
 	published_at: '2026-10-16T00:00:00Z',
 	updated_at: '2026-10-17T00:00:00Z',
 	owner: { id: userId, handle: 'ana-silva' },
@@ -95,8 +133,19 @@ describe('parsePublished', () => {
 	});
 
 	it('maps a fork parent', () => {
-		const result = parsePublished(row({ forked_from: parentId }));
-		expect(result.ok && result.value.forkedFrom).toBe(parentId);
+		const result = parsePublished(row({ parent: { id: parentId, title: 'Original', owner: { handle: 'bo-lee' } } }));
+		expect(result.ok && result.value.forkedFrom).toEqual({ id: parentId, title: 'Original', handle: 'bo-lee' });
+	});
+
+	it('maps a null parent title to an empty string', () => {
+		const result = parsePublished(row({ parent: { id: parentId, title: null, owner: { handle: 'bo-lee' } } }));
+		expect(result.ok && result.value.forkedFrom?.title).toBe('');
+	});
+
+	it('rejects a parent with a bad handle', () => {
+		expect(failure(row({ parent: { id: parentId, title: 'x', owner: { handle: 'Bad Handle' } } }))).toContain(
+			'parent.owner.handle',
+		);
 	});
 
 	it('rejects an edge pointing at an unknown node', () => {

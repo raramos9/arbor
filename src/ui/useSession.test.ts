@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 import { describe, expect, it } from 'vitest';
-import { HandleSchema, UserIdSchema } from '../model/publishing';
+import { UserIdSchema } from '../model/publishing';
+import { HandleSchema } from '../model/strategy';
 import { toSessionState, type LoadedProfile } from './useSession';
 
 const id = '5b1f3c52-6a4e-4d0a-9d52-1f6f0f8f2a11';

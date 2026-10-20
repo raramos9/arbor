@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../database.types';
-import { HandleSchema, type Handle, type UserId } from '../model/publishing';
+import type { UserId } from '../model/publishing';
+import { HandleSchema, type Handle } from '../model/strategy';
 import type { Result } from '../model/strategy';
 
 export function describeHandleError(error: { code?: string; message: string }): string {

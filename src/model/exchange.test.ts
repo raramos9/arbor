@@ -37,6 +37,18 @@ describe('parseArborFile', () => {
 		expect(result.value.clips).toEqual([clip('keep')]);
 	});
 
+	it('round-trips a strategy with an origin', () => {
+		const origin = { publishedId: '22222222-2222-4222-8222-222222222222', title: 'Original', handle: 'bo-lee' };
+		const result = parseArborFile(fileText({}, { ...withClip(), origin }));
+		expect(result.ok && result.value.strategy.origin).toEqual(origin);
+	});
+
+	it('imports a file without origin as null', () => {
+		const { origin: _origin, ...old } = withClip();
+		const result = parseArborFile(fileText({}, old));
+		expect(result.ok && result.value.strategy.origin).toBeNull();
+	});
+
 	it('opens a v1 export, keeping labels and dropping retired fields', () => {
 		const v1 = {
 			...armDragInput,

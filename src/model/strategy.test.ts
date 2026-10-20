@@ -97,6 +97,25 @@ describe('parseStrategy', () => {
 	});
 });
 
+describe('origin', () => {
+	const origin = { publishedId: '22222222-2222-4222-8222-222222222222', title: 'Original', handle: 'bo-lee' };
+
+	it('defaults to null when absent', () => {
+		const result = parseStrategy(structuredClone(armDragInput));
+		expect(result.ok && result.value.origin).toBeNull();
+	});
+
+	it('round-trips a valid origin', () => {
+		const result = parseStrategy({ ...structuredClone(armDragInput), origin });
+		expect(result.ok && result.value.origin).toEqual(origin);
+	});
+
+	it('rejects a bad origin handle', () => {
+		const result = parseStrategy({ ...structuredClone(armDragInput), origin: { ...origin, handle: 'Bad Handle' } });
+		expect(result.ok).toBe(false);
+	});
+});
+
 describe('createStrategy', () => {
 	it('creates a valid doc with a root node', () => {
 		const doc = createStrategy({ title: 'T', ruleset: 'gi', startingSide: 'top', rootName: 'Closed guard' });

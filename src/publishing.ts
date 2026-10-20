@@ -2,13 +2,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
 import {
 	PUBLISHED_COLUMNS,
-	PublishedIdSchema,
 	parsePublished,
 	prepareForPublish,
 	type PublishedStrategy,
 	type UserId,
 } from './model/publishing';
-import type { Result, StrategyDoc } from './model/strategy';
+import { PublishedIdSchema, type Result, type StrategyDoc } from './model/strategy';
 
 type Client = SupabaseClient<Database>;
 
