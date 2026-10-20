@@ -10,14 +10,15 @@ type Props = {
 };
 
 export function Field({ label, value, onChange, multiline, autoFocus, placeholder }: Props) {
-	const [draft, setDraft] = useState(value);
+	// While focused the field shows what was typed; otherwise it follows the doc, so undo shows up.
+	const [draft, setDraft] = useState<string | null>(null);
 	const shared = {
-		value: draft,
+		value: draft ?? value,
 		onChange: (e: { target: { value: string } }) => {
 			setDraft(e.target.value);
 			onChange(e.target.value);
 		},
-		onBlur: () => setDraft(value),
+		onBlur: () => setDraft(null),
 	};
 	return (
 		<label>
