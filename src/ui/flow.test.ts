@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EdgeIdSchema, type Media } from '../model/strategy';
+import { EdgeIdSchema, NodeIdSchema, type Media } from '../model/strategy';
 import { armDragDoc } from '../model/fixtures';
 import {
 	edgeAriaLabel,
@@ -8,6 +8,8 @@ import {
 	isInside,
 	NODE_SIZE,
 	occupiedRects,
+	reactionSource,
+	reactionSpot,
 	toFlowEdges,
 	toFlowNodes,
 	type StrategyFlowEdge,
@@ -125,5 +127,45 @@ describe('aria labels', () => {
 		const doc = armDragDoc();
 		expect(edgeAriaLabel(doc, doc.edges['e2']!)).toBe('Arm drag to Back take, reaction: Arm stays displaced');
 		expect(edgeAriaLabel(doc, doc.edges['e1']!)).toBe('Open guard to Arm drag');
+	});
+});
+
+describe('reactionSource', () => {
+	const doc = armDragDoc();
+
+	it('uses the selected node', () => {
+		expect(reactionSource(doc, { type: 'node', id: NodeIdSchema.parse('back-take') })).toBe('back-take');
+	});
+
+	it('uses the target of the selected edge', () => {
+		expect(reactionSource(doc, { type: 'edge', id: EdgeIdSchema.parse('e2') })).toBe('back-take');
+	});
+
+	it('falls back to the start node', () => {
+		expect(reactionSource(doc, null)).toBe(doc.rootNodeId);
+	});
+});
+
+describe('reactionSpot', () => {
+	const source = { x: 100, y: 50, ...NODE_SIZE };
+
+	it('puts the first reaction directly below the source', () => {
+		const spot = reactionSpot(source, 0, [source]);
+		expect(spot.x).toBe(source.x);
+		expect(spot.y).toBeGreaterThan(source.y + source.height);
+	});
+
+	it('puts the second reaction to the right of the first', () => {
+		const first = reactionSpot(source, 0, [source]);
+		const second = reactionSpot(source, 1, [source, { ...first, ...NODE_SIZE }]);
+		expect(second.y).toBe(first.y);
+		expect(second.x).toBeGreaterThanOrEqual(first.x + NODE_SIZE.width);
+	});
+
+	it('skips an occupied spot', () => {
+		const first = reactionSpot(source, 0, [source]);
+		const spot = reactionSpot(source, 0, [source, { ...first, ...NODE_SIZE }]);
+		expect(spot.x).toBe(first.x);
+		expect(spot.y).toBeGreaterThanOrEqual(first.y + NODE_SIZE.height);
 	});
 });

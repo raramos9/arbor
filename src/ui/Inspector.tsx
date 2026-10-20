@@ -10,6 +10,7 @@ type InspectorAccess =
 			exec: (cmd: Command) => ApplyResult;
 			onDeleted: () => void;
 			focusField: boolean;
+			onAddReaction: () => void;
 	  }
 	| { mode: 'view' };
 
@@ -87,9 +88,10 @@ type EditProps = Target & {
 	exec: (cmd: Command) => ApplyResult;
 	onDeleted: () => void;
 	focusField: boolean;
+	onAddReaction: () => void;
 };
 
-function EditInspector({ doc, node, edge, error, exec, onDeleted, focusField }: EditProps) {
+function EditInspector({ doc, node, edge, error, exec, onDeleted, focusField, onAddReaction }: EditProps) {
 	function remove(cmd: Command) {
 		if (exec(cmd).ok) onDeleted();
 	}
@@ -112,6 +114,7 @@ function EditInspector({ doc, node, edge, error, exec, onDeleted, focusField }: 
 						onChange={(notes) => exec({ type: 'updateNode', id: node.id, patch: { notes } })}
 					/>
 					<MediaList media={node.media} access={{ mode: 'edit', owner: { type: 'node', id: node.id }, exec }} />
+					<button onClick={onAddReaction}>+ Reaction</button>
 					{node.id === doc.rootNodeId ? (
 						<p className="muted">This is the start of the strategy.</p>
 					) : (
@@ -132,6 +135,12 @@ function EditInspector({ doc, node, edge, error, exec, onDeleted, focusField }: 
 						value={edge.label}
 						autoFocus={focusField}
 						onChange={(label) => exec({ type: 'updateEdge', id: edge.id, patch: { label } })}
+					/>
+					<Field
+						label="Then"
+						placeholder="Your next move"
+						value={doc.nodes[edge.to]?.name ?? ''}
+						onChange={(name) => exec({ type: 'updateNode', id: edge.to, patch: { name } })}
 					/>
 					<Field
 						label="Notes"
