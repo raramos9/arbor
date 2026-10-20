@@ -6,6 +6,8 @@ import { unreferencedClips } from '../model/media';
 import { createStrategy, RulesetSchema, SideSchema, type Ruleset, type Side, type StrategyDoc } from '../model/strategy';
 import { editorHref, navigate } from '../route';
 import { hasStrategy, listStrategies, loadStrategy, saveStrategy } from '../storage';
+import { cloud } from '../supabase';
+import { AccountControl } from './AccountControl';
 
 type ImportState =
 	| { kind: 'idle' }
@@ -100,6 +102,7 @@ export function ListScreen() {
 		<div className="page">
 			<header className="header">
 				<h1>Arbor</h1>
+				{cloud && <AccountControl client={cloud} />}
 			</header>
 			<main className="list-layout">
 				<section>
