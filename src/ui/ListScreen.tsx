@@ -4,7 +4,7 @@ import { importStrategy, readArborFile } from '../exchange';
 import { planImport, type ArborFile } from '../model/exchange';
 import { unreferencedClips } from '../model/media';
 import { createStrategy, RulesetSchema, SideSchema, type Ruleset, type Side, type StrategyDoc } from '../model/strategy';
-import { editorHref, navigate } from '../route';
+import { editorHref, exploreHref, navigate } from '../route';
 import { hasStrategy, listStrategies, loadStrategy, saveStrategy } from '../storage';
 import { cloud } from '../supabase';
 import { AccountControl } from './AccountControl';
@@ -102,6 +102,7 @@ export function ListScreen() {
 		<div className="page">
 			<header className="header">
 				<h1>Arbor</h1>
+				{cloud && <a href={exploreHref}>Explore</a>}
 				{cloud && <AccountControl client={cloud} />}
 			</header>
 			<main className="list-layout">

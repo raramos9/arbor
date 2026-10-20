@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import type { Database } from '../database.types';
+import { profileHref } from '../route';
 import { parseAuthRedirectError } from './authRedirect';
 import { HandleDialog } from './HandleDialog';
 import { SignInDialog } from './SignInDialog';
@@ -45,7 +46,7 @@ export function AccountControl({ client }: { client: SupabaseClient<Database> })
 			return (
 				<div className="account">
 					{session.handle ? (
-						<span className="muted">@{session.handle}</span>
+						<a href={profileHref(session.handle)}>@{session.handle}</a>
 					) : (
 						<>
 							<span className="muted">{session.email}</span>
