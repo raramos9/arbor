@@ -58,6 +58,21 @@ export function prepareForPublish(doc: StrategyDoc): { doc: StrategyDoc; strippe
 	return { doc: { ...doc, nodes, edges }, strippedClips };
 }
 
+function sameJson(a: unknown, b: unknown): boolean {
+	if (a === b) return true;
+	if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
+	if (Array.isArray(a) || Array.isArray(b)) {
+		return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((item, i) => sameJson(item, b[i]));
+	}
+	const left = Object.entries(a);
+	const right = b as Record<string, unknown>;
+	return left.length === Object.keys(right).length && left.every(([key, value]) => key in right && sameJson(value, right[key]));
+}
+
+export function hasChanges(local: StrategyDoc, published: StrategyDoc): boolean {
+	return !sameJson(prepareForPublish(local).doc, published);
+}
+
 export function parsePublished(row: unknown): Result<PublishedStrategy> {
 	const parsed = PublishedRowSchema.safeParse(row);
 	if (!parsed.success) {

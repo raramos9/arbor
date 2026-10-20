@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { PublishedId } from './model/publishing';
 
 export type Route = { page: 'list' } | { page: 'editor'; id: string };
 
@@ -9,6 +10,7 @@ export function parseHash(hash: string): Route {
 }
 
 export const editorHref = (id: string) => `#/s/${encodeURIComponent(id)}`;
+export const publishedHref = (id: PublishedId) => `#/p/${encodeURIComponent(id)}`;
 
 export function navigate(hash: string) {
 	window.location.hash = hash;
