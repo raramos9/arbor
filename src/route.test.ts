@@ -15,6 +15,18 @@ describe('parseHash', () => {
 		expect(parseHash('#/p/anything')).toEqual({ page: 'published', id: 'anything' });
 	});
 
+	it('resolves the explore hash', () => {
+		expect(parseHash('#/explore')).toEqual({ page: 'explore' });
+	});
+
+	it('resolves a profile hash', () => {
+		expect(parseHash('#/u/alice')).toEqual({ page: 'profile', handle: 'alice' });
+	});
+
+	it('decodes a URL-encoded profile handle', () => {
+		expect(parseHash('#/u/a%20b')).toEqual({ page: 'profile', handle: 'a b' });
+	});
+
 	it('resolves a magic-link callback to the list', () => {
 		expect(parseHash('#access_token=abc&refresh_token=def&type=magiclink')).toEqual({ page: 'list' });
 	});
