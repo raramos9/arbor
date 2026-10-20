@@ -93,6 +93,14 @@ const LABEL_CHAR_WIDTH = 8;
 const LABEL_PADDING = 16;
 const LABEL_HEIGHT = 32;
 const LABEL_MAX_WIDTH = 200;
+const CLIP_ICON_WIDTH = 28;
+const CLIP_ICON_GAP = 5;
+
+function pillWidth(label: string, hasMedia: boolean): number {
+	if (label === '') return CLIP_ICON_WIDTH;
+	const text = label.length * LABEL_CHAR_WIDTH + LABEL_PADDING;
+	return hasMedia ? text + CLIP_ICON_WIDTH - LABEL_PADDING + CLIP_ICON_GAP : text;
+}
 
 function nodeRect(node: StrategyFlowNode): Rect {
 	return {
@@ -109,8 +117,9 @@ export function occupiedRects(nodes: readonly StrategyFlowNode[], edges: readonl
 		const from = rects.get(edge.source);
 		const to = rects.get(edge.target);
 		const label = edge.data?.label ?? '';
-		if (!from || !to || label === '') return [];
-		const width = Math.min(label.length * LABEL_CHAR_WIDTH + LABEL_PADDING, LABEL_MAX_WIDTH);
+		const hasMedia = (edge.data?.mediaCount ?? 0) > 0;
+		if (!from || !to || (label === '' && !hasMedia)) return [];
+		const width = Math.min(pillWidth(label, hasMedia), LABEL_MAX_WIDTH);
 		const centerX = (from.x + from.width / 2 + to.x + to.width / 2) / 2;
 		const centerY = (from.y + from.height + to.y) / 2;
 		return [{ x: centerX - width / 2, y: centerY - LABEL_HEIGHT / 2, width, height: LABEL_HEIGHT }];
