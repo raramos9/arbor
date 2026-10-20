@@ -1,35 +1,74 @@
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { Database } from '../database.types';
-import { UserIdSchema, type UserId } from '../model/publishing';
+import { HandleSchema, UserIdSchema, type Handle, type UserId } from '../model/publishing';
 
 export type SessionState =
 	| { status: 'loading' }
 	| { status: 'signed-out' }
-	| { status: 'signed-in'; userId: UserId; email: string };
+	| { status: 'signed-in'; userId: UserId; email: string; handle: Handle | null };
 
-export function toSessionState(session: Session | null): SessionState {
-	if (!session) return { status: 'signed-out' };
+export type LoadedProfile = { userId: UserId; handle: Handle | null };
+
+function identityOf(session: Session): { userId: UserId; email: string } | null {
 	const userId = UserIdSchema.safeParse(session.user.id);
 	const email = session.user.email;
-	if (!userId.success || !email) return { status: 'signed-out' };
-	return { status: 'signed-in', userId: userId.data, email };
+	if (!userId.success || !email) return null;
+	return { userId: userId.data, email };
 }
 
-export function useSession(client: SupabaseClient<Database>): SessionState {
-	const [state, setState] = useState<SessionState>({ status: 'loading' });
+export function toSessionState(session: Session | null | undefined, profile: LoadedProfile | null): SessionState {
+	if (session === undefined) return { status: 'loading' };
+	if (session === null) return { status: 'signed-out' };
+	const identity = identityOf(session);
+	if (!identity) return { status: 'signed-out' };
+	if (profile?.userId !== identity.userId) return { status: 'loading' };
+	return { status: 'signed-in', ...identity, handle: profile.handle };
+}
+
+export function useSession(client: SupabaseClient<Database>): [SessionState, (handle: Handle) => void] {
+	const [session, setSession] = useState<Session | null | undefined>(undefined);
+	const [profile, setProfile] = useState<LoadedProfile | null>(null);
+	const userId = (session && identityOf(session)?.userId) || null;
+
 	useEffect(() => {
 		let active = true;
 		void client.auth.getSession().then(({ data }) => {
-			if (active) setState(toSessionState(data.session));
+			if (active) setSession(data.session);
 		});
-		const { data } = client.auth.onAuthStateChange((_event, session) => {
-			setState(toSessionState(session));
+		const { data } = client.auth.onAuthStateChange((_event, next) => {
+			setSession(next);
 		});
 		return () => {
 			active = false;
 			data.subscription.unsubscribe();
 		};
 	}, [client]);
-	return state;
+
+	useEffect(() => {
+		if (userId === null) return;
+		let active = true;
+		void client
+			.from('profiles')
+			.select('handle')
+			.eq('id', userId)
+			.maybeSingle()
+			.then(({ data, error }) => {
+				if (!active) return;
+				const handle = error ? null : HandleSchema.nullable().safeParse(data?.handle ?? null);
+				setProfile({ userId, handle: handle && handle.success ? handle.data : null });
+			});
+		return () => {
+			active = false;
+		};
+	}, [client, userId]);
+
+	const setHandle = useCallback(
+		(handle: Handle) => {
+			if (userId !== null) setProfile({ userId, handle });
+		},
+		[userId],
+	);
+
+	return [toSessionState(session, profile), setHandle];
 }

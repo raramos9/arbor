@@ -8,6 +8,14 @@ export const HandleSchema = z
 	.regex(/^[a-z0-9][a-z0-9-]{1,22}[a-z0-9]$/)
 	.brand('Handle');
 
+export function parseHandle(input: string): Result<Handle> {
+	const parsed = HandleSchema.safeParse(input.trim().toLowerCase());
+	if (!parsed.success) {
+		return { ok: false, error: 'Use 3 to 24 lowercase letters, digits, or dashes, starting and ending with a letter or digit.' };
+	}
+	return { ok: true, value: parsed.data };
+}
+
 export type PublishedId = z.infer<typeof PublishedIdSchema>;
 export type UserId = z.infer<typeof UserIdSchema>;
 export type Handle = z.infer<typeof HandleSchema>;

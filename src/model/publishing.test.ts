@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { armDragDoc, armDragInput } from './fixtures';
-import { parsePublished, prepareForPublish } from './publishing';
+import { parseHandle, parsePublished, prepareForPublish } from './publishing';
 import { ClipIdSchema, EdgeIdSchema, NodeIdSchema, type Media, type StrategyDoc } from './strategy';
 
 const publishedId = '11111111-1111-4111-8111-111111111111';
@@ -129,5 +129,34 @@ describe('parsePublished', () => {
 	it('rejects a non-object row', () => {
 		expect(failure('nope')).toContain('row:');
 		expect(failure(null)).toContain('row:');
+	});
+});
+
+describe('parseHandle', () => {
+	it('accepts a valid handle', () => {
+		expect(parseHandle('ada-99')).toEqual({ ok: true, value: 'ada-99' });
+	});
+
+	it('trims and lowercases', () => {
+		expect(parseHandle('  Ada-Lovelace ')).toEqual({ ok: true, value: 'ada-lovelace' });
+	});
+
+	it('accepts the length bounds', () => {
+		expect(parseHandle('abc').ok).toBe(true);
+		expect(parseHandle('a'.repeat(24)).ok).toBe(true);
+	});
+
+	it.each([
+		['too short', 'ab'],
+		['too long', 'a'.repeat(25)],
+		['leading dash', '-abc'],
+		['trailing dash', 'abc-'],
+		['bad characters', 'ab_c'],
+		['spaces inside', 'ab c'],
+		['empty', ''],
+	])('rejects %s', (_name, input) => {
+		const result = parseHandle(input);
+		expect(result.ok).toBe(false);
+		if (!result.ok) expect(result.error).toContain('3 to 24');
 	});
 });

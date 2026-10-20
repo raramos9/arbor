@@ -2,12 +2,14 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import type { Database } from '../database.types';
 import { parseAuthRedirectError } from './authRedirect';
+import { HandleDialog } from './HandleDialog';
 import { SignInDialog } from './SignInDialog';
 import { useSession } from './useSession';
 
 export function AccountControl({ client }: { client: SupabaseClient<Database> }) {
-	const session = useSession(client);
+	const [session, setHandle] = useSession(client);
 	const [signingIn, setSigningIn] = useState(false);
+	const [choosingHandle, setChoosingHandle] = useState(false);
 	const [redirectError, setRedirectError] = useState(() => parseAuthRedirectError(window.location.hash));
 
 	useEffect(() => {
@@ -15,6 +17,10 @@ export function AccountControl({ client }: { client: SupabaseClient<Database> })
 			history.replaceState(null, '', window.location.pathname + window.location.search);
 		}
 	}, [redirectError]);
+
+	useEffect(() => {
+		if (session.status !== 'signed-in') setChoosingHandle(false);
+	}, [session.status]);
 
 	switch (session.status) {
 		case 'loading':
@@ -38,10 +44,27 @@ export function AccountControl({ client }: { client: SupabaseClient<Database> })
 		case 'signed-in':
 			return (
 				<div className="account">
-					<span className="muted">{session.email}</span>
+					{session.handle ? (
+						<span className="muted">@{session.handle}</span>
+					) : (
+						<>
+							<span className="muted">{session.email}</span>
+							<button type="button" onClick={() => setChoosingHandle(true)}>
+								Choose handle
+							</button>
+						</>
+					)}
 					<button type="button" onClick={() => void client.auth.signOut()}>
 						Sign out
 					</button>
+					{choosingHandle && (
+						<HandleDialog
+							client={client}
+							userId={session.userId}
+							onSaved={setHandle}
+							onClose={() => setChoosingHandle(false)}
+						/>
+					)}
 				</div>
 			);
 		default: {
