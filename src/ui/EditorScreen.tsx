@@ -17,6 +17,7 @@ import {
 	type NodeId,
 	type StrategyDoc,
 } from '../model/strategy';
+import { cloud } from '../supabase';
 import { loadStrategy } from '../storage';
 import {
 	NODE_SIZE,
@@ -31,6 +32,7 @@ import {
 	type StrategyFlowNode,
 } from './flow';
 import { Inspector } from './Inspector';
+import { PublishControl } from './PublishControl';
 import { StrategyNodeView } from './StrategyNodeView';
 import { useEditor } from './useEditor';
 
@@ -210,6 +212,7 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 				<button onClick={() => void onExport()} disabled={exporting}>
 					{exporting ? 'Exporting…' : 'Export'}
 				</button>
+				{cloud && <PublishControl client={cloud} doc={doc} />}
 				{saveError && <span className="error">{saveError}</span>}
 				{exportError && <span className="error">{exportError}</span>}
 			</header>

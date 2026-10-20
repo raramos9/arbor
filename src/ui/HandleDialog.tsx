@@ -36,7 +36,6 @@ export function HandleDialog({
 			return;
 		}
 		onSaved(saved.value);
-		onClose();
 	}
 
 	return (

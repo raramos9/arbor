@@ -61,7 +61,10 @@ export function AccountControl({ client }: { client: SupabaseClient<Database> })
 						<HandleDialog
 							client={client}
 							userId={session.userId}
-							onSaved={setHandle}
+							onSaved={(handle) => {
+								setHandle(handle);
+								setChoosingHandle(false);
+							}}
 							onClose={() => setChoosingHandle(false)}
 						/>
 					)}
