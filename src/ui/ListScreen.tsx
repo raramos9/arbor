@@ -197,7 +197,7 @@ export function ListScreen() {
 							</select>
 						</label>
 						{error && <p className="error">{error}</p>}
-						<button type="submit" disabled={!valid}>
+						<button type="submit" className="primary" disabled={!valid}>
 							New strategy
 						</button>
 					</form>

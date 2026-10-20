@@ -84,7 +84,7 @@ export function SignInDialog({
 						<button type="button" onClick={close}>
 							Cancel
 						</button>
-						<button type="submit" disabled={address === '' || busy}>
+						<button type="submit" className="primary" disabled={address === '' || busy}>
 							{state.kind === 'sending' ? 'Sending…' : 'Send link'}
 						</button>
 					</div>
