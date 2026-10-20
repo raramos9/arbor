@@ -16,6 +16,26 @@ function autoPosition(index: number) {
 	return { x: (index % GRID_COLUMNS) * GRID_X, y: Math.floor(index / GRID_COLUMNS) * GRID_Y };
 }
 
+function clipCount(count: number): string {
+	return count === 1 ? '1 clip' : `${count} clips`;
+}
+
+export function nodeAriaLabel(name: string, isRoot: boolean, mediaCount: number): string {
+	const parts = [name || 'Untitled'];
+	if (isRoot) parts.push('start');
+	if (mediaCount > 0) parts.push(clipCount(mediaCount));
+	return parts.join(', ');
+}
+
+export function edgeAriaLabel(doc: StrategyDoc, edge: StrategyEdge): string {
+	const from = doc.nodes[edge.from]?.name || 'Untitled';
+	const to = doc.nodes[edge.to]?.name || 'Untitled';
+	const parts = [`${from} to ${to}`];
+	if (edge.label !== '') parts.push(`reaction: ${edge.label}`);
+	if (edge.media.length > 0) parts.push(clipCount(edge.media.length));
+	return parts.join(', ');
+}
+
 export function toFlowNodes(
 	doc: StrategyDoc,
 	selection: Selection,
@@ -23,13 +43,15 @@ export function toFlowNodes(
 ): StrategyFlowNode[] {
 	return Object.values(doc.nodes).map((node, index) => {
 		const size = measured[node.id];
+		const isRoot = node.id === doc.rootNodeId;
 		return {
 			id: node.id,
 			type: 'strategy',
+			ariaLabel: nodeAriaLabel(node.name, isRoot, node.media.length),
 			position: doc.layout[node.id] ?? autoPosition(index),
 			data: {
 				name: node.name,
-				isRoot: node.id === doc.rootNodeId,
+				isRoot,
 				mediaCount: node.media.length,
 			},
 			selected: selection?.type === 'node' && selection.id === node.id,
@@ -49,6 +71,7 @@ export function toFlowEdges(doc: StrategyDoc, selection: Selection): Edge[] {
 		source: edge.from,
 		target: edge.to,
 		label: edgeLabel(edge),
+		ariaLabel: edgeAriaLabel(doc, edge),
 		markerEnd: { type: MarkerType.ArrowClosed },
 		selected: selection?.type === 'edge' && selection.id === edge.id,
 	}));
