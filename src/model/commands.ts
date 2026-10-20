@@ -1,3 +1,4 @@
+import type { Position } from './positions';
 import {
 	type EdgeId,
 	type Media,
@@ -36,7 +37,13 @@ export type Command =
 	| { type: 'removeMedia'; owner: MediaOwner; index: number }
 	| {
 			type: 'updateMeta';
-			patch: { title?: string; description?: string; ruleset?: Ruleset; startingSide?: Side };
+			patch: {
+				title?: string;
+				description?: string;
+				ruleset?: Ruleset;
+				startingSide?: Side;
+				position?: Position | null;
+			};
 	  };
 
 export type ApplyResult = { ok: true; doc: StrategyDoc } | { ok: false; reason: string };
@@ -182,6 +189,7 @@ export function apply(doc: StrategyDoc, cmd: Command): ApplyResult {
 					description: cmd.patch.description ?? doc.description,
 					ruleset: cmd.patch.ruleset ?? doc.ruleset,
 					startingSide: cmd.patch.startingSide ?? doc.startingSide,
+					position: 'position' in cmd.patch ? (cmd.patch.position ?? null) : doc.position,
 				}),
 			};
 		default: {

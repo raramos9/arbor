@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PositionSchema, positionName, type Position } from './positions';
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
@@ -81,6 +82,7 @@ export const StrategyDocSchema = z.object({
 	createdAt: z.string(),
 	updatedAt: z.string(),
 	origin: OriginSchema.nullable().default(null),
+	position: PositionSchema.nullable().default(null),
 });
 
 export type PublishedId = z.infer<typeof PublishedIdSchema>;
@@ -136,7 +138,7 @@ export function createStrategy(args: {
 	title: string;
 	ruleset: Ruleset;
 	startingSide: Side;
-	rootName: string;
+	position: Position;
 }): StrategyDoc {
 	const rootId = newNodeId();
 	const now = new Date().toISOString();
@@ -151,7 +153,7 @@ export function createStrategy(args: {
 		nodes: {
 			[rootId]: {
 				id: rootId,
-				name: args.rootName,
+				name: positionName(args.position),
 				notes: '',
 				media: [],
 			},
@@ -161,5 +163,6 @@ export function createStrategy(args: {
 		createdAt: now,
 		updatedAt: now,
 		origin: null,
+		position: args.position,
 	};
 }
