@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
 import { forkPublished, type PublishedStrategy } from '../model/publishing';
+import { positionName } from '../model/positions';
 import { fetchPublished } from '../publishing';
 import { editorHref, navigate, profileHref, publishedHref } from '../route';
 import { saveStrategy } from '../storage';
@@ -104,6 +105,11 @@ function Viewer({ published }: { published: PublishedStrategy }) {
 				<BackLink />
 				<span className="header-sep" />
 				<h1>{doc.title || 'Untitled'}</h1>
+				{doc.position && (
+					<span className="position-chip">
+						{positionName(doc.position)} · {doc.startingSide}
+					</span>
+				)}
 				<a href={profileHref(owner.handle)}>@{owner.handle}</a>
 				<span className="muted">Published {new Date(publishedAt).toLocaleDateString()}</span>
 				{forkedFrom && (

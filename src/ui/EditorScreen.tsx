@@ -3,6 +3,7 @@ import { ReactFlowProvider, useReactFlow, type Connection } from '@xyflow/react'
 import { exportStrategy } from '../exchange';
 import { exportFileName } from '../model/exchange';
 import type { ApplyResult, Command } from '../model/commands';
+import { positionName } from '../model/positions';
 import {
 	newEdgeId,
 	newNodeId,
@@ -247,6 +248,15 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 				<BackLink />
 				<span className="header-sep" />
 				<h1>{doc.title || 'Untitled'}</h1>
+				{doc.position ? (
+					<span className="position-chip">
+						{positionName(doc.position)} · {doc.startingSide}
+					</span>
+				) : (
+					<button className="position-chip" onClick={() => select(null)}>
+						Set starting position
+					</button>
+				)}
 				{doc.origin && (
 					<span className="muted">
 						Forked from <a href={publishedHref(doc.origin.publishedId)}>{doc.origin.title || 'Untitled'}</a> by <a href={profileHref(doc.origin.handle)}>@{doc.origin.handle}</a>
