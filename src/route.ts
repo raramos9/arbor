@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import type { PublishedId } from './model/publishing';
 
-export type Route = { page: 'list' } | { page: 'editor'; id: string };
+export type Route = { page: 'list' } | { page: 'editor'; id: string } | { page: 'published'; id: string };
 
 export function parseHash(hash: string): Route {
 	const match = /^#\/s\/(.+)$/.exec(hash);
 	if (match?.[1]) return { page: 'editor', id: decodeURIComponent(match[1]) };
+	const published = /^#\/p\/(.+)$/.exec(hash);
+	if (published?.[1]) return { page: 'published', id: decodeURIComponent(published[1]) };
 	return { page: 'list' };
 }
 
