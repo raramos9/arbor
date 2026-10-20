@@ -62,6 +62,24 @@ describe('History', () => {
 		expect(history.undo(first)).toBe(start);
 	});
 
+	it('merges typing a position name but not picking one', () => {
+		const history = new History();
+		const start = armDragDoc();
+		const meta = (position: Extract<Command, { type: 'updateMeta' }>['patch']['position']): Command => ({
+			type: 'updateMeta',
+			patch: { position },
+		});
+		const after = runAll(history, start, [
+			{ cmd: meta({ kind: 'listed', id: 'mount' }), at: 0 },
+			{ cmd: meta(null), at: 100 },
+			{ cmd: meta({ kind: 'other', name: 'W' }), at: 200 },
+			{ cmd: meta({ kind: 'other', name: 'Williams' }), at: 300 },
+			{ cmd: meta(null), at: 400 },
+		]);
+		expect(after.position).toBeNull();
+		expect(history.undo(after)?.position).toEqual({ kind: 'other', name: 'Williams' });
+	});
+
 	it('drops the redo stack after a new edit', () => {
 		const history = new History();
 		const start = armDragDoc();
