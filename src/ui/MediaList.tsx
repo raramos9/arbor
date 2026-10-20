@@ -11,6 +11,7 @@ import {
 } from '../model/media';
 import { newClipId, type Media } from '../model/strategy';
 import { Field } from './Field';
+import { PlayIcon } from './PlayIcon';
 import { readVideo } from './poster';
 
 type ClipMedia = Extract<Media, { provider: 'clip' }>;
@@ -225,7 +226,7 @@ function YouTubePreview({ videoId, startSeconds, url }: YouTubeProps) {
 		<button className="video-frame play" aria-label="Play video" onClick={() => setPlaying(true)}>
 			<img src={youtubeThumbnail(videoId)} alt="" onError={() => setThumbnailFailed(true)} />
 			<span className="play-overlay" aria-hidden="true">
-				▶
+				<PlayIcon size={28} />
 			</span>
 		</button>
 	);
@@ -299,7 +300,7 @@ function ClipBody({ media, state, playing, onPlay }: ClipBodyProps) {
 				<button className="video-frame play" aria-label="Play clip" onClick={onPlay}>
 					{state.posterUrl && <img src={state.posterUrl} alt="" />}
 					<span className="play-overlay" aria-hidden="true">
-						▶
+						<PlayIcon size={28} />
 					</span>
 					{media.durationSeconds !== null && (
 						<span className="duration-badge">{formatDuration(media.durationSeconds)}</span>

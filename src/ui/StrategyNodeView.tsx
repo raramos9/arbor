@@ -1,5 +1,6 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import type { StrategyFlowNode } from './flow';
+import { PlayIcon } from './PlayIcon';
 
 export function StrategyNodeView({ data, selected }: NodeProps<StrategyFlowNode>) {
 	return (
@@ -7,10 +8,16 @@ export function StrategyNodeView({ data, selected }: NodeProps<StrategyFlowNode>
 			<Handle type="target" position={Position.Top} />
 			<div className="node-meta">
 				{data.isRoot && <span className="root-badge">start</span>}
-				{data.mediaCount > 0 && <span className="media-badge" aria-hidden="true">▶ {data.mediaCount}</span>}
+				{data.mediaCount > 0 && (
+					<span className="media-badge" aria-hidden="true">
+						<PlayIcon />
+						{data.mediaCount}
+					</span>
+				)}
 			</div>
 			<div className="node-name">{data.name || 'Untitled'}</div>
 			<Handle type="source" position={Position.Bottom} />
+			{data.isEnd && <span className="line-end" aria-hidden="true" />}
 		</div>
 	);
 }

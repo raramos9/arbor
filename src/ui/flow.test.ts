@@ -1,8 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { EdgeIdSchema, NodeIdSchema, type Media } from '../model/strategy';
-import type { Edge } from '@xyflow/react';
+import { EdgeIdSchema, type Media } from '../model/strategy';
 import { armDragDoc } from '../model/fixtures';
-import { edgeAriaLabel, edgeLabel, findFreeSpot, nodeAriaLabel, isInside, NODE_SIZE, occupiedRects, type StrategyFlowNode } from './flow';
+import {
+	edgeAriaLabel,
+	findFreeSpot,
+	nodeAriaLabel,
+	isInside,
+	NODE_SIZE,
+	occupiedRects,
+	toFlowEdges,
+	toFlowNodes,
+	type StrategyFlowEdge,
+	type StrategyFlowNode,
+} from './flow';
 
 describe('findFreeSpot', () => {
 	it('returns the candidate on an empty canvas', () => {
@@ -28,10 +38,16 @@ describe('occupiedRects', () => {
 		id,
 		type: 'strategy',
 		position: { x: 0, y },
-		data: { name: id, isRoot: false, mediaCount: 0 },
+		data: { name: id, isRoot: false, isEnd: false, mediaCount: 0 },
 	});
 	const nodes = [node('a', 0), node('b', 300)];
-	const edge = (label: string): Edge => ({ id: 'e', source: 'a', target: 'b', label });
+	const edge = (label: string): StrategyFlowEdge => ({
+		id: 'e',
+		type: 'strategy',
+		source: 'a',
+		target: 'b',
+		data: { label, mediaCount: 0 },
+	});
 
 	it('keeps a new node below a connected node off the label', () => {
 		const label = { x: 0, y: (NODE_SIZE.height + 300) / 2, width: 1, height: 1 };
@@ -57,25 +73,47 @@ describe('isInside', () => {
 	});
 });
 
-describe('edgeLabel', () => {
-	const base = { id: EdgeIdSchema.parse('e'), from: NodeIdSchema.parse('a'), to: NodeIdSchema.parse('b'), notes: '' };
+describe('toFlowEdges', () => {
 	const clip: Media = { provider: 'web', title: '', url: 'https://example.com' };
 
-	it('leaves the label alone without media', () => {
-		expect(edgeLabel({ ...base, label: 'Sweep', media: [] })).toBe('Sweep');
+	it('carries the reaction and clip count as edge data', () => {
+		const doc = armDragDoc();
+		doc.edges['e2'] = { ...doc.edges['e2']!, media: [clip, clip] };
+		const edges = toFlowEdges(doc, null);
+		expect(edges.map((edge) => edge.data)).toEqual([
+			{ label: '', mediaCount: 0 },
+			{ label: 'Arm stays displaced', mediaCount: 2 },
+			{ label: 'Arm wraps around my back', mediaCount: 0 },
+		]);
+		expect(edges.every((edge) => edge.type === 'strategy' && edge.label === undefined)).toBe(true);
 	});
-	it('appends a marker when media exists', () => {
-		expect(edgeLabel({ ...base, label: 'Sweep', media: [clip] })).toBe('Sweep ▶');
+
+	it('marks only the selected edge', () => {
+		const doc = armDragDoc();
+		const edges = toFlowEdges(doc, { type: 'edge', id: EdgeIdSchema.parse('e2') });
+		expect(edges.map((edge) => edge.selected)).toEqual([false, true, false]);
+		expect(edges[1]!.ariaLabel).toBe(edgeAriaLabel(doc, doc.edges['e2']!));
 	});
-	it('shows only the marker for an empty label', () => {
-		expect(edgeLabel({ ...base, label: '', media: [clip] })).toBe('▶');
+});
+
+describe('toFlowNodes', () => {
+	it('flags nodes with no outgoing connection as line ends', () => {
+		const nodes = toFlowNodes(armDragDoc(), null, {});
+		expect(nodes.map((node) => [node.id, node.data.isEnd])).toEqual([
+			['open-guard', false],
+			['arm-drag', false],
+			['back-take', true],
+			['triangle', true],
+		]);
+		expect(nodes[2]!.ariaLabel).toBe('Back take, line ends');
 	});
 });
 
 describe('aria labels', () => {
 	it('names a node by its name, start flag, and clips', () => {
-		expect(nodeAriaLabel('Open guard', true, 2)).toBe('Open guard, start, 2 clips');
-		expect(nodeAriaLabel('', false, 1)).toBe('Untitled, 1 clip');
+		expect(nodeAriaLabel('Open guard', true, 2, false)).toBe('Open guard, start, 2 clips');
+		expect(nodeAriaLabel('', false, 1, false)).toBe('Untitled, 1 clip');
+		expect(nodeAriaLabel('Triangle', false, 0, true)).toBe('Triangle, line ends');
 	});
 
 	it('names a connection by its ends and reaction', () => {

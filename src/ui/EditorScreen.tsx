@@ -19,6 +19,7 @@ import {
 	isInside,
 	type Point,
 	type Selection,
+	type StrategyFlowEdge,
 	type StrategyFlowNode,
 } from './flow';
 import { Inspector } from './Inspector';
@@ -81,7 +82,7 @@ function deletedName(doc: StrategyDoc, cmd: Command): string | null {
 
 function Editor({ initial }: { initial: StrategyDoc }) {
 	const { doc, run, persist, saveError, undo, redo, canUndo, canRedo } = useEditor(initial);
-	const { screenToFlowPosition, setCenter, getZoom, getNodes, getEdges } = useReactFlow<StrategyFlowNode>();
+	const { screenToFlowPosition, setCenter, getZoom, getNodes, getEdges } = useReactFlow<StrategyFlowNode, StrategyFlowEdge>();
 	const canvasRef = useRef<HTMLDivElement>(null);
 	const [selection, setSelection] = useState<Selection>(null);
 	const [error, setError] = useState<string | null>(null);
