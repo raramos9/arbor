@@ -14,6 +14,7 @@ function editKey(cmd: Command): string | null {
 		case 'updateEdge':
 			return `${cmd.type}:${cmd.id}:${Object.keys(cmd.patch).sort().join(',')}`;
 		case 'updateMeta':
+			if ('position' in cmd.patch && cmd.patch.position?.kind !== 'other') return null;
 			return `meta:${Object.keys(cmd.patch).sort().join(',')}`;
 		case 'updateMediaTitle':
 			return `media:${cmd.owner.type}:${cmd.owner.id}:${cmd.index}`;
