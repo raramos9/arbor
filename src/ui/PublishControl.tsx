@@ -72,7 +72,7 @@ export function PublishControl({ client, doc }: { client: SupabaseClient<Databas
 		else setDialog((d) => (d.kind === 'signing-in' ? { kind: 'none' } : d));
 	}, [session.status]);
 
-	const settled = session.status === 'signed-in' && (remote.kind === 'unpublished' || remote.kind === 'published');
+	const settled = session.status === 'signed-in' && remote.kind !== 'checking';
 	const resumeTo = session.status === 'signed-in' && remote.kind === 'unpublished' ? (session.handle ? 'confirm-publish' : 'choosing-handle') : null;
 	// A magic link signs in every open tab; resume only in the one the user is looking at.
 	const visible = usePageVisible();
