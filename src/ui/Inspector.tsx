@@ -1,8 +1,10 @@
 import type { ApplyResult, Command } from '../model/commands';
+import { positionName } from '../model/positions';
 import { RulesetSchema, SideSchema, type StrategyDoc } from '../model/strategy';
 import { Field, ReadField, SelectField } from './Field';
 import type { Selection } from './flow';
 import { MediaList } from './MediaList';
+import { PositionField } from './PositionField';
 
 type InspectorAccess =
 	| {
@@ -75,6 +77,7 @@ function ViewInspector({ doc, node, edge }: Target) {
 					<h2>Strategy</h2>
 					<ReadField label="Title" value={doc.title || 'Untitled'} />
 					{doc.description !== '' && <ReadField label="Description" value={doc.description} />}
+					{doc.position && <ReadField label="Starting position" value={positionName(doc.position)} />}
 					<ReadField label="Ruleset" value={doc.ruleset} />
 					<ReadField label="Starting side" value={doc.startingSide} />
 				</div>
@@ -167,6 +170,11 @@ function EditInspector({ doc, node, edge, error, exec, onDeleted, focusField, on
 						multiline
 						value={doc.description}
 						onChange={(description) => exec({ type: 'updateMeta', patch: { description } })}
+					/>
+					<PositionField
+						value={doc.position}
+						allowNone
+						onChange={(position) => exec({ type: 'updateMeta', patch: { position } })}
 					/>
 					<SelectField
 						label="Ruleset"
