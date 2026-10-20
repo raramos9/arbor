@@ -9,6 +9,7 @@ import {
 	type NodeId,
 	type StrategyDoc,
 } from '../model/strategy';
+import { publishedHref } from '../route';
 import { cloud } from '../supabase';
 import { loadStrategy } from '../storage';
 import {
@@ -178,6 +179,12 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 			<header className="header">
 				<a href="#/">Strategies</a>
 				<h1>{doc.title || 'Untitled'}</h1>
+				{doc.origin && (
+					<span className="muted">
+						Forked from <a href={publishedHref(doc.origin.publishedId)}>{doc.origin.title || 'Untitled'}</a> by @
+						{doc.origin.handle}
+					</span>
+				)}
 				<button onClick={() => void onExport()} disabled={exporting}>
 					{exporting ? 'Exporting…' : 'Export'}
 				</button>
