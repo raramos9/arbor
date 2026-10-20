@@ -19,24 +19,38 @@ export function Dialog({ label, onClose, children }: { label: string; onClose: (
 			e.preventDefault();
 			closeRef.current();
 		};
+		// Chrome's close watcher can close the dialog without firing cancel.
+		const onNativeClose = () => closeRef.current();
 		dialog.addEventListener('cancel', onCancel);
+		dialog.addEventListener('close', onNativeClose);
 		return () => {
 			dialog.removeEventListener('cancel', onCancel);
+			dialog.removeEventListener('close', onNativeClose);
 			dialog.close();
 			if (opener?.isConnected) opener.focus();
 		};
 	}, []);
 
+	// A drag that starts inside the box and ends on the backdrop must not close it.
+	const pressedOutside = useRef(false);
+
+	function onMouseDown(e: MouseEvent<HTMLDialogElement>) {
+		pressedOutside.current = isOutside(e);
+	}
+
 	function onClick(e: MouseEvent<HTMLDialogElement>) {
-		if (e.target !== e.currentTarget) return;
-		const box = e.currentTarget.getBoundingClientRect();
-		const inside = e.clientX >= box.left && e.clientX <= box.right && e.clientY >= box.top && e.clientY <= box.bottom;
-		if (!inside) onClose();
+		if (pressedOutside.current && isOutside(e)) onClose();
 	}
 
 	return (
-		<dialog ref={ref} className="dialog" aria-label={label} onClick={onClick}>
+		<dialog ref={ref} className="dialog" aria-label={label} onMouseDown={onMouseDown} onClick={onClick}>
 			{children}
 		</dialog>
 	);
+}
+
+function isOutside(e: MouseEvent<HTMLDialogElement>): boolean {
+	if (e.target !== e.currentTarget) return false;
+	const box = e.currentTarget.getBoundingClientRect();
+	return e.clientX < box.left || e.clientX > box.right || e.clientY < box.top || e.clientY > box.bottom;
 }
