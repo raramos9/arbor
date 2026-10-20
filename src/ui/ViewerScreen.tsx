@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
 import { forkPublished, type PublishedStrategy } from '../model/publishing';
 import { fetchPublished } from '../publishing';
@@ -6,8 +6,12 @@ import { editorHref, navigate, profileHref, publishedHref } from '../route';
 import { saveStrategy } from '../storage';
 import { cloud } from '../supabase';
 import type { Selection } from './flow';
+import { BackLink } from './BackLink';
 import { Inspector } from './Inspector';
+import { OutlinePane } from './OutlinePane';
+import { entrySelection, type OutlineEntry } from './outline';
 import { StrategyCanvas } from './StrategyCanvas';
+import { useRevealNode } from './useRevealNode';
 
 type ViewerState = { kind: 'loading' } | { kind: 'unavailable' } | { kind: 'ready'; published: PublishedStrategy };
 
@@ -43,7 +47,7 @@ export function ViewerScreen({ id }: { id: string }) {
 			return (
 				<div className="page">
 					<header className="header">
-						<a href="#/">Strategies</a>
+						<BackLink />
 					</header>
 					<main className="notice">
 						<p className="muted">Loading…</p>
@@ -54,7 +58,7 @@ export function ViewerScreen({ id }: { id: string }) {
 			return (
 				<div className="page">
 					<header className="header">
-						<a href="#/">Strategies</a>
+						<BackLink />
 					</header>
 					<main className="notice">
 						<h2>This strategy isn't available</h2>
@@ -79,6 +83,8 @@ function Viewer({ published }: { published: PublishedStrategy }) {
 	const { doc, owner, publishedAt, forkedFrom } = published;
 	const [selection, setSelection] = useState<Selection>(null);
 	const [forkError, setForkError] = useState<string | null>(null);
+	const canvasRef = useRef<HTMLDivElement>(null);
+	const { revealNode } = useRevealNode(canvasRef);
 
 	function onFork() {
 		const fork = forkPublished(published, new Date().toISOString());
@@ -87,10 +93,16 @@ function Viewer({ published }: { published: PublishedStrategy }) {
 		else setForkError(saved.error);
 	}
 
+	function selectEntry(entry: OutlineEntry) {
+		setSelection(entrySelection(entry));
+		revealNode(entry.node);
+	}
+
 	return (
 		<div className="page editor-page">
 			<header className="header">
-				<a href="#/">Strategies</a>
+				<BackLink />
+				<span className="header-sep" />
 				<h1>{doc.title || 'Untitled'}</h1>
 				<a href={profileHref(owner.handle)}>@{owner.handle}</a>
 				<span className="muted">Published {new Date(publishedAt).toLocaleDateString()}</span>
@@ -99,11 +111,14 @@ function Viewer({ published }: { published: PublishedStrategy }) {
 						Forked from <a href={publishedHref(forkedFrom.id)}>{forkedFrom.title || 'Untitled'}</a> by <a href={profileHref(forkedFrom.handle)}>@{forkedFrom.handle}</a>
 					</span>
 				)}
-				<button onClick={onFork}>Fork into my strategies</button>
 				{forkError && <span className="error">{forkError}</span>}
+				<div className="header-actions">
+					<button onClick={onFork}>Fork into my strategies</button>
+				</div>
 			</header>
 			<div className="editor">
-				<div className="canvas">
+				<OutlinePane doc={doc} selection={selection} onSelectEntry={selectEntry} />
+				<div className="canvas" ref={canvasRef}>
 					<StrategyCanvas doc={doc} selection={selection} onSelect={setSelection} access={{ mode: 'view' }} />
 				</div>
 				<Inspector doc={doc} selection={selection} error={null} access={{ mode: 'view' }} />

@@ -16,16 +16,19 @@ import {
 	NODE_SIZE,
 	findFreeSpot,
 	occupiedRects,
-	isInside,
 	type Point,
 	type Selection,
 	type StrategyFlowEdge,
 	type StrategyFlowNode,
 } from './flow';
+import { BackLink } from './BackLink';
 import { Inspector } from './Inspector';
+import { OutlinePane } from './OutlinePane';
+import { entrySelection, type OutlineEntry } from './outline';
 import { PublishControl } from './PublishControl';
 import { StrategyCanvas } from './StrategyCanvas';
 import { useEditor } from './useEditor';
+import { useRevealNode } from './useRevealNode';
 
 const SELECTED_NODE_GAP = 140;
 const NOTICE_MS = 8000;
@@ -45,7 +48,7 @@ export function EditorScreen({ id }: { id: string }) {
 		return (
 			<div className="page">
 				<header className="header">
-					<a href="#/">Strategies</a>
+					<BackLink />
 				</header>
 				<main className="notice">
 					<h2>This strategy cannot be opened</h2>
@@ -82,8 +85,9 @@ function deletedName(doc: StrategyDoc, cmd: Command): string | null {
 
 function Editor({ initial }: { initial: StrategyDoc }) {
 	const { doc, run, persist, saveError, undo, redo, canUndo, canRedo } = useEditor(initial);
-	const { screenToFlowPosition, setCenter, getZoom, getNodes, getEdges } = useReactFlow<StrategyFlowNode, StrategyFlowEdge>();
+	const { screenToFlowPosition, getNodes, getEdges } = useReactFlow<StrategyFlowNode, StrategyFlowEdge>();
 	const canvasRef = useRef<HTMLDivElement>(null);
+	const { revealAt, revealNode } = useRevealNode(canvasRef);
 	const [selection, setSelection] = useState<Selection>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [focusField, setFocusField] = useState(false);
@@ -184,7 +188,7 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 		if (result.ok) {
 			setSelection({ type: 'node', id: nodeId });
 			setFocusField(true);
-			revealNode(at);
+			revealAt(at);
 		}
 	}
 
@@ -192,14 +196,9 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 		placeNode((id, at) => ({ type: 'addNode', id, name: 'New node', at }));
 	}
 
-	function revealNode(at: Point) {
-		const rect = canvasRef.current?.getBoundingClientRect();
-		if (!rect) return;
-		const topLeft = screenToFlowPosition({ x: rect.left, y: rect.top });
-		const bottomRight = screenToFlowPosition({ x: rect.right, y: rect.bottom });
-		const view = { ...topLeft, width: bottomRight.x - topLeft.x, height: bottomRight.y - topLeft.y };
-		if (isInside({ ...at, ...NODE_SIZE }, view)) return;
-		setCenter(at.x + NODE_SIZE.width / 2, at.y + NODE_SIZE.height / 2, { zoom: getZoom(), duration: 200 });
+	function selectEntry(entry: OutlineEntry) {
+		select(entrySelection(entry));
+		revealNode(entry.node);
 	}
 
 	function onMove(id: string, at: Point) {
@@ -221,34 +220,38 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 	return (
 		<div className="page editor-page">
 			<header className="header">
-				<a href="#/">Strategies</a>
+				<BackLink />
+				<span className="header-sep" />
 				<h1>{doc.title || 'Untitled'}</h1>
 				{doc.origin && (
 					<span className="muted">
 						Forked from <a href={publishedHref(doc.origin.publishedId)}>{doc.origin.title || 'Untitled'}</a> by <a href={profileHref(doc.origin.handle)}>@{doc.origin.handle}</a>
 					</span>
 				)}
-				<button onClick={() => void onExport()} disabled={exporting}>
-					{exporting ? 'Exporting…' : 'Export'}
-				</button>
-				{cloud && <PublishControl client={cloud} doc={doc} />}
 				{saveError && <span className="error">{saveError}</span>}
 				{exportError && <span className="error">{exportError}</span>}
+				<div className="header-actions">
+					<button onClick={() => step('undo')} disabled={!canUndo} aria-keyshortcuts="Meta+Z Control+Z">
+						Undo
+					</button>
+					<button
+						onClick={() => step('redo')}
+						disabled={!canRedo}
+						aria-keyshortcuts="Meta+Shift+Z Control+Shift+Z Control+Y"
+					>
+						Redo
+					</button>
+					<button onClick={() => void onExport()} disabled={exporting}>
+						{exporting ? 'Exporting…' : 'Export'}
+					</button>
+					{cloud && <PublishControl client={cloud} doc={doc} />}
+				</div>
 			</header>
 			<div className="editor">
+				<OutlinePane doc={doc} selection={selection} onSelectEntry={selectEntry} />
 				<div className="canvas" ref={canvasRef}>
 					<div className="toolbar">
 						<button onClick={addNode}>Add node</button>
-						<button onClick={() => step('undo')} disabled={!canUndo} aria-keyshortcuts="Meta+Z Control+Z">
-							Undo
-						</button>
-						<button
-							onClick={() => step('redo')}
-							disabled={!canRedo}
-							aria-keyshortcuts="Meta+Shift+Z Control+Shift+Z Control+Y"
-						>
-							Redo
-						</button>
 					</div>
 					<div className="notice-bar" role="status">
 						{notice && (
