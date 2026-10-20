@@ -7,16 +7,21 @@ import {
 	type PublishedStrategy,
 	type UserId,
 } from './model/publishing';
-import { PublishedIdSchema, type Result, type StrategyDoc } from './model/strategy';
+import { PublishedIdSchema, type PublishedId, type Result, type StrategyDoc } from './model/strategy';
 
 type Client = SupabaseClient<Database>;
 
 export async function publish(client: Client, doc: StrategyDoc): Promise<Result<PublishedStrategy>> {
-	const { data, error } = await client
-		.from('published_strategies')
-		.upsert({ doc: prepareForPublish(doc).doc }, { onConflict: 'owner,local_id' })
-		.select(PUBLISHED_COLUMNS)
-		.single();
+	const upsert = (forkedFrom: PublishedId | null) =>
+		client
+			.from('published_strategies')
+			.upsert({ doc: prepareForPublish(doc).doc, forked_from: forkedFrom }, { onConflict: 'owner,local_id' })
+			.select(PUBLISHED_COLUMNS)
+			.single();
+	let { data, error } = await upsert(doc.origin?.publishedId ?? null);
+	if (doc.origin && error?.code === '23503' && error.message.includes('forked_from')) {
+		({ data, error } = await upsert(null));
+	}
 	if (error) return { ok: false, error: error.message };
 	return parsePublished(data);
 }
