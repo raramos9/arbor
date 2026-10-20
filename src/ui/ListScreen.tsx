@@ -47,7 +47,7 @@ export function ListScreen() {
 		if (!valid) return;
 		const doc = createStrategy({
 			title: title.trim(),
-			rootName: rootName.trim(),
+			position: { kind: 'other', name: rootName.trim() },
 			ruleset,
 			startingSide: side,
 		});

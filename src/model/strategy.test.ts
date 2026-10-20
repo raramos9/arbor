@@ -118,13 +118,56 @@ describe('origin', () => {
 
 describe('createStrategy', () => {
 	it('creates a valid doc with a root node', () => {
-		const doc = createStrategy({ title: 'T', ruleset: 'gi', startingSide: 'top', rootName: 'Closed guard' });
+		const doc = createStrategy({
+			title: 'T',
+			ruleset: 'gi',
+			startingSide: 'top',
+			position: { kind: 'listed', id: 'closed-guard' },
+		});
 		expect(parseStrategy(doc).ok).toBe(true);
 		expect(doc.schemaVersion).toBe(2);
 		expect(doc.nodes[doc.rootNodeId]?.name).toBe('Closed guard');
+		expect(doc.position).toEqual({ kind: 'listed', id: 'closed-guard' });
+	});
+
+	it('names the root after a custom position', () => {
+		const doc = createStrategy({
+			title: 'T',
+			ruleset: 'gi',
+			startingSide: 'top',
+			position: { kind: 'other', name: 'Lasso guard' },
+		});
+		expect(doc.nodes[doc.rootNodeId]?.name).toBe('Lasso guard');
 	});
 
 	it('round-trips through JSON', () => {
 		expect(parseStrategy(JSON.parse(JSON.stringify(armDragDoc()))).ok).toBe(true);
+	});
+});
+
+describe('position', () => {
+	const withPosition = (position: unknown) => parseStrategy({ ...structuredClone(armDragInput), position });
+
+	it('defaults to null when absent', () => {
+		const result = parseStrategy(structuredClone(armDragInput));
+		expect(result.ok && result.value.position).toBeNull();
+	});
+
+	it('accepts a listed position', () => {
+		const result = withPosition({ kind: 'listed', id: 'half-guard' });
+		expect(result.ok && result.value.position).toEqual({ kind: 'listed', id: 'half-guard' });
+	});
+
+	it('accepts and trims a custom position', () => {
+		const result = withPosition({ kind: 'other', name: '  Lasso guard ' });
+		expect(result.ok && result.value.position).toEqual({ kind: 'other', name: 'Lasso guard' });
+	});
+
+	it('refuses a blank custom position', () => {
+		expect(withPosition({ kind: 'other', name: '   ' }).ok).toBe(false);
+	});
+
+	it('refuses an unknown listed id', () => {
+		expect(withPosition({ kind: 'listed', id: 'rubber-guard' }).ok).toBe(false);
 	});
 });

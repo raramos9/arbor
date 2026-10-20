@@ -83,6 +83,13 @@ describe('prepareForPublish', () => {
 
 const origin = { publishedId: PublishedIdSchema.parse(parentId), title: 'Original', handle: HandleSchema.parse('bo-lee') };
 
+describe('position', () => {
+	it('prepareForPublish keeps the position', () => {
+		const position = { kind: 'listed', id: 'half-guard' } as const;
+		expect(prepareForPublish({ ...armDragDoc(), position }).doc.position).toEqual(position);
+	});
+});
+
 describe('forks', () => {
 	it('prepareForPublish nulls origin', () => {
 		expect(prepareForPublish({ ...armDragDoc(), origin }).doc.origin).toBeNull();

@@ -199,6 +199,15 @@ describe('updateMeta', () => {
 		const doc = ok(armDragDoc(), { type: 'updateMeta', patch: { title: 'New', ruleset: 'gi', startingSide: 'top' } });
 		expect(doc).toMatchObject({ title: 'New', ruleset: 'gi', startingSide: 'top', description: '' });
 	});
+
+	it('sets, keeps and clears the position', () => {
+		let doc = ok(armDragDoc(), { type: 'updateMeta', patch: { position: { kind: 'listed', id: 'mount' } } });
+		expect(doc.position).toEqual({ kind: 'listed', id: 'mount' });
+		doc = ok(doc, { type: 'updateMeta', patch: { title: 'Again' } });
+		expect(doc.position).toEqual({ kind: 'listed', id: 'mount' });
+		doc = ok(doc, { type: 'updateMeta', patch: { position: null } });
+		expect(doc.position).toBeNull();
+	});
 });
 
 describe('media commands', () => {

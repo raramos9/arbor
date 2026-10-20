@@ -1,0 +1,35 @@
+import { z } from 'zod';
+
+export const POSITIONS = [
+	{ id: 'standing', name: 'Standing' },
+	{ id: 'closed-guard', name: 'Closed guard' },
+	{ id: 'half-guard', name: 'Half guard' },
+	{ id: 'butterfly-guard', name: 'Butterfly guard' },
+	{ id: 'de-la-riva', name: 'De La Riva' },
+	{ id: 'spider-guard', name: 'Spider guard' },
+	{ id: 'x-guard', name: 'X-guard' },
+	{ id: 'single-leg-x', name: 'Single leg X' },
+	{ id: 'side-control', name: 'Side control' },
+	{ id: 'mount', name: 'Mount' },
+	{ id: 'back', name: 'Back control' },
+	{ id: 'turtle', name: 'Turtle' },
+	{ id: 'north-south', name: 'North-south' },
+	{ id: 'knee-on-belly', name: 'Knee on belly' },
+] as const;
+
+const [first, ...rest] = POSITIONS;
+
+export const PositionIdSchema = z.enum([first.id, ...rest.map((p) => p.id)]);
+
+export const PositionSchema = z.discriminatedUnion('kind', [
+	z.object({ kind: z.literal('listed'), id: PositionIdSchema }),
+	z.object({ kind: z.literal('other'), name: z.string().trim().min(1).max(60) }),
+]);
+
+export type PositionId = z.infer<typeof PositionIdSchema>;
+export type Position = z.infer<typeof PositionSchema>;
+
+export function positionName(position: Position): string {
+	if (position.kind === 'other') return position.name;
+	return POSITIONS.find((p) => p.id === position.id)?.name ?? position.id;
+}
