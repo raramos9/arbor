@@ -2,6 +2,8 @@ import { z } from 'zod';
 import {
 	HandleSchema,
 	PublishedIdSchema,
+	RulesetSchema,
+	SideSchema,
 	newStrategyId,
 	parseStrategy,
 	type Handle,
@@ -9,6 +11,8 @@ import {
 	type Media,
 	type PublishedId,
 	type Result,
+	type Ruleset,
+	type Side,
 	type StrategyDoc,
 } from './strategy';
 
@@ -113,4 +117,54 @@ export function forkPublished(published: PublishedStrategy, now: string): Strate
 		createdAt: now,
 		updatedAt: now,
 	};
+}
+
+export const SUMMARY_COLUMNS = 'id, title, ruleset, starting_side, updated_at, owner:profiles!owner(handle)';
+export const PAGE_SIZE = 50;
+
+export type PublishedSummary = {
+	id: PublishedId;
+	title: string;
+	handle: Handle;
+	ruleset: Ruleset;
+	startingSide: Side;
+	updatedAt: string;
+};
+
+export type SummaryCursor = { updatedAt: string; id: PublishedId };
+export type SummaryPage = { items: PublishedSummary[]; next: SummaryCursor | null };
+
+const SummaryRowSchema = z.object({
+	id: PublishedIdSchema,
+	title: z.string().nullable(),
+	ruleset: RulesetSchema,
+	starting_side: SideSchema,
+	updated_at: z.string(),
+	owner: z.object({ handle: HandleSchema }),
+});
+
+export function toSummaryPage(rows: unknown[]): SummaryPage {
+	const kept = rows.slice(0, PAGE_SIZE);
+	const lastKept: unknown = kept[PAGE_SIZE - 1];
+	const cursor = z.object({ updated_at: z.string(), id: PublishedIdSchema }).safeParse(lastKept);
+	const next = rows.length > PAGE_SIZE && cursor.success ? { updatedAt: cursor.data.updated_at, id: cursor.data.id } : null;
+	const items: PublishedSummary[] = [];
+	for (const row of kept) {
+		const parsed = SummaryRowSchema.safeParse(row);
+		if (!parsed.success) {
+			const id = (row as { id?: unknown } | null)?.id;
+			console.warn(`Skipping malformed published strategy ${String(id)}`);
+			continue;
+		}
+		const { data } = parsed;
+		items.push({
+			id: data.id,
+			title: data.title ?? '',
+			handle: data.owner.handle,
+			ruleset: data.ruleset,
+			startingSide: data.starting_side,
+			updatedAt: data.updated_at,
+		});
+	}
+	return { items, next };
 }

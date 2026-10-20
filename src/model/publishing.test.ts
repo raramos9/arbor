@@ -1,6 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { armDragDoc, armDragInput } from './fixtures';
-import { forkPublished, hasChanges, parseHandle, parsePublished, prepareForPublish } from './publishing';
+import {
+	PAGE_SIZE,
+	forkPublished,
+	hasChanges,
+	parseHandle,
+	parsePublished,
+	prepareForPublish,
+	toSummaryPage,
+} from './publishing';
 import {
 	ClipIdSchema,
 	EdgeIdSchema,
@@ -248,5 +256,54 @@ describe('hasChanges', () => {
 		const local = armDragDoc();
 		local.layout['arm-drag'] = { x: 10, y: 20 };
 		expect(hasChanges(local, armDragDoc())).toBe(true);
+	});
+});
+
+describe('toSummaryPage', () => {
+	const row = (i: number, overrides: Record<string, unknown> = {}) => ({
+		id: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
+		title: `Strategy ${i}`,
+		ruleset: 'gi',
+		starting_side: 'top',
+		updated_at: `2026-01-01T00:00:${String(59 - (i % 60)).padStart(2, '0')}.000Z`,
+		owner: { handle: 'alice' },
+		...overrides,
+	});
+	const rows = (count: number) => Array.from({ length: count }, (_, i) => row(i));
+
+	it('has no next page when fewer than a page and one extra arrive', () => {
+		const page = toSummaryPage(rows(PAGE_SIZE));
+		expect(page.items).toHaveLength(PAGE_SIZE);
+		expect(page.next).toBeNull();
+	});
+
+	it('keeps a page and cursors on its last row when more arrive', () => {
+		const all = rows(PAGE_SIZE + 1);
+		const page = toSummaryPage(all);
+		expect(page.items).toHaveLength(PAGE_SIZE);
+		expect(page.next).toEqual({ updatedAt: all[PAGE_SIZE - 1]?.updated_at, id: all[PAGE_SIZE - 1]?.id });
+		expect(page.items[0]).toEqual({
+			id: all[0]?.id,
+			title: 'Strategy 0',
+			handle: 'alice',
+			ruleset: 'gi',
+			startingSide: 'top',
+			updatedAt: all[0]?.updated_at,
+		});
+	});
+
+	it('drops a malformed row but still cursors from the raw last row', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const all = rows(PAGE_SIZE + 1);
+		all[PAGE_SIZE - 1] = row(PAGE_SIZE - 1, { ruleset: 'nonsense' });
+		const page = toSummaryPage(all);
+		expect(page.items).toHaveLength(PAGE_SIZE - 1);
+		expect(page.next).toEqual({ updatedAt: all[PAGE_SIZE - 1]?.updated_at, id: all[PAGE_SIZE - 1]?.id });
+		expect(warn).toHaveBeenCalledOnce();
+		warn.mockRestore();
+	});
+
+	it('turns a null title into an empty string', () => {
+		expect(toSummaryPage([row(1, { title: null })]).items[0]?.title).toBe('');
 	});
 });
