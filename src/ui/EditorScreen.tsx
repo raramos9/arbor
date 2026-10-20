@@ -149,7 +149,7 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 
 	useEffect(() => {
 		const onKey = (e: KeyboardEvent) => {
-			if (isEditable(e.target)) return;
+			if (isEditable(e.target) || document.querySelector('dialog[open]')) return;
 			const key = e.key.toLowerCase();
 			if ((e.metaKey || e.ctrlKey) && !e.altKey && (key === 'z' || key === 'y')) {
 				e.preventDefault();
