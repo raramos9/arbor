@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { armDragDoc, armDragInput } from './fixtures';
-import { parseHandle, parsePublished, prepareForPublish } from './publishing';
-import { ClipIdSchema, EdgeIdSchema, NodeIdSchema, type Media, type StrategyDoc } from './strategy';
+import { hasChanges, parseHandle, parsePublished, prepareForPublish } from './publishing';
+import { ClipIdSchema, EdgeIdSchema, NodeIdSchema, parseStrategy, type Media, type StrategyDoc } from './strategy';
 
 const publishedId = '11111111-1111-4111-8111-111111111111';
 const parentId = '22222222-2222-4222-8222-222222222222';
@@ -158,5 +158,46 @@ describe('parseHandle', () => {
 		const result = parseHandle(input);
 		expect(result.ok).toBe(false);
 		if (!result.ok) expect(result.error).toContain('3 to 24');
+	});
+});
+
+describe('hasChanges', () => {
+	const reorder = (value: unknown): unknown => {
+		if (Array.isArray(value)) return value.map(reorder);
+		if (typeof value !== 'object' || value === null) return value;
+		return Object.fromEntries(
+			Object.entries(value)
+				.reverse()
+				.map(([key, inner]) => [key, reorder(inner)]),
+		);
+	};
+
+	it('is false for identical docs', () => {
+		expect(hasChanges(armDragDoc(), armDragDoc())).toBe(false);
+	});
+
+	it('ignores object key order', () => {
+		const published = parseStrategy(reorder(JSON.parse(JSON.stringify(armDragDoc()))));
+		if (!published.ok) throw new Error(published.error);
+		expect(hasChanges(armDragDoc(), published.value)).toBe(false);
+	});
+
+	it('ignores clips that publishing strips', () => {
+		const local = mixedDoc();
+		expect(hasChanges(local, prepareForPublish(local).doc)).toBe(false);
+	});
+
+	it('detects a renamed node', () => {
+		const local = armDragDoc();
+		const node = local.nodes[NodeIdSchema.parse('arm-drag')];
+		if (!node) throw new Error('fixture changed');
+		node.name = 'Renamed';
+		expect(hasChanges(local, armDragDoc())).toBe(true);
+	});
+
+	it('detects a moved layout', () => {
+		const local = armDragDoc();
+		local.layout['arm-drag'] = { x: 10, y: 20 };
+		expect(hasChanges(local, armDragDoc())).toBe(true);
 	});
 });
