@@ -70,7 +70,8 @@ export function toOutline(doc: StrategyDoc): Outline {
 	return { start, unlinked };
 }
 
-export function reactionPhrase(reaction: string): string {
+export function reactionPhrase(typed: string): string {
+	const reaction = typed.replace(/^if /i, '');
 	if (reaction === '') return 'then';
 	if (/^he /i.test(reaction)) return `if he ${reaction.slice(3)}`;
 	return `if ${reaction}`;
