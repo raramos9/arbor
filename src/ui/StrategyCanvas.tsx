@@ -83,6 +83,7 @@ export function StrategyCanvas({ doc, selection, onSelect, access }: Props) {
 				nodesConnectable={editing}
 				edgesReconnectable={editing}
 				deleteKeyCode={null}
+				panActivationKeyCode={null}
 				fitView
 			>
 				<Background />
