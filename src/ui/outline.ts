@@ -81,3 +81,7 @@ export function isLit(entry: OutlineEntry, selection: Selection): boolean {
 	if (selection.type === 'edge') return entry.edge === selection.id;
 	return entry.kind === 'step' && entry.node === selection.id;
 }
+
+export function entrySelection(entry: OutlineEntry): Selection {
+	return entry.kind === 'jump' ? { type: 'edge', id: entry.edge } : { type: 'node', id: entry.node };
+}

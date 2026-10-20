@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { armDragDoc } from '../model/fixtures';
 import { EdgeIdSchema, NodeIdSchema, type StrategyDoc } from '../model/strategy';
-import { isLit, toOutline, reactionPhrase, type OutlineEntry, type OutlineStep } from './outline';
+import { entrySelection, isLit, toOutline, reactionPhrase, type OutlineEntry, type OutlineStep } from './outline';
 
 function graph(nodeNames: string[], links: [string, string, string?][], root = nodeNames[0]!): StrategyDoc {
 	const doc = armDragDoc();
@@ -122,5 +122,14 @@ describe('isLit', () => {
 	it('never lights the first row of a line by an edge', () => {
 		expect(isLit(start, { type: 'node', id: NodeIdSchema.parse('a') })).toBe(true);
 		expect(isLit(start, { type: 'edge', id: EdgeIdSchema.parse('e0') })).toBe(false);
+	});
+});
+
+describe('entrySelection', () => {
+	it('selects the node for a step and the edge for a jump', () => {
+		const { start } = toOutline(graph(['a', 'b'], [['a', 'b'], ['b', 'a']]));
+		const step = start.next[0] as OutlineStep;
+		expect(entrySelection(step)).toEqual({ type: 'node', id: 'b' });
+		expect(entrySelection(step.next[0]!)).toEqual({ type: 'edge', id: 'e1' });
 	});
 });
