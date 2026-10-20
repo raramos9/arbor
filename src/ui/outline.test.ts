@@ -97,6 +97,15 @@ describe('reactionPhrase', () => {
 		expect(reactionPhrase('he posts a hand')).toBe('if he posts a hand');
 		expect(reactionPhrase('HE posts')).toBe('if he posts');
 	});
+	it('does not double a typed "if"', () => {
+		expect(reactionPhrase('if he posts')).toBe('if he posts');
+		expect(reactionPhrase('If he posts')).toBe('if he posts');
+		expect(reactionPhrase('if the arm stays')).toBe('if the arm stays');
+		expect(reactionPhrase('if ')).toBe('then');
+	});
+	it('keeps words that only start with if', () => {
+		expect(reactionPhrase('iffy grip')).toBe('if iffy grip');
+	});
 	it('prefixes anything else with if', () => {
 		expect(reactionPhrase('Arm stays displaced')).toBe('if Arm stays displaced');
 		expect(reactionPhrase('Hello')).toBe('if Hello');
