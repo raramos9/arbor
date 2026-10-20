@@ -47,6 +47,33 @@ describe('addNode', () => {
 	});
 });
 
+describe('addReaction', () => {
+	const cmd: Command = {
+		type: 'addReaction',
+		from: nid('triangle'),
+		edge: eid('new-edge'),
+		node: nid('new-node'),
+		at: { x: 10, y: 20 },
+	};
+	it('adds the node and the connection to it', () => {
+		const doc = ok(armDragDoc(), cmd);
+		expect(doc.nodes[nid('new-node')]).toMatchObject({ name: '', notes: '', media: [] });
+		expect(doc.edges[eid('new-edge')]).toMatchObject({ from: nid('triangle'), to: nid('new-node'), label: '' });
+		expect(doc.layout[nid('new-node')]).toEqual({ x: 10, y: 20 });
+	});
+	it('refuses an unknown source', () => {
+		refused(armDragDoc(), { ...cmd, from: nid('ghost') });
+	});
+	it('refuses an existing edge id', () => {
+		const doc = armDragDoc();
+		const existing = Object.keys(doc.edges)[0] ?? '';
+		refused(doc, { ...cmd, edge: eid(existing) });
+	});
+	it('refuses an existing node id', () => {
+		refused(armDragDoc(), { ...cmd, node: nid('triangle') });
+	});
+});
+
 describe('updateNode', () => {
 	it('edits name and notes', () => {
 		const doc = ok(armDragDoc(), {
