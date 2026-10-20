@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { EdgeIdSchema, NodeIdSchema, type Media } from '../model/strategy';
 import type { Edge } from '@xyflow/react';
-import { edgeLabel, findFreeSpot, isInside, NODE_SIZE, occupiedRects, type StrategyFlowNode } from './flow';
+import { armDragDoc } from '../model/fixtures';
+import { edgeAriaLabel, edgeLabel, findFreeSpot, nodeAriaLabel, isInside, NODE_SIZE, occupiedRects, type StrategyFlowNode } from './flow';
 
 describe('findFreeSpot', () => {
 	it('returns the candidate on an empty canvas', () => {
@@ -68,5 +69,18 @@ describe('edgeLabel', () => {
 	});
 	it('shows only the marker for an empty label', () => {
 		expect(edgeLabel({ ...base, label: '', media: [clip] })).toBe('▶');
+	});
+});
+
+describe('aria labels', () => {
+	it('names a node by its name, start flag, and clips', () => {
+		expect(nodeAriaLabel('Open guard', true, 2)).toBe('Open guard, start, 2 clips');
+		expect(nodeAriaLabel('', false, 1)).toBe('Untitled, 1 clip');
+	});
+
+	it('names a connection by its ends and reaction', () => {
+		const doc = armDragDoc();
+		expect(edgeAriaLabel(doc, doc.edges['e2']!)).toBe('Arm drag to Back take, reaction: Arm stays displaced');
+		expect(edgeAriaLabel(doc, doc.edges['e1']!)).toBe('Open guard to Arm drag');
 	});
 });

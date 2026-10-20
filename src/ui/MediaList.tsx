@@ -136,6 +136,7 @@ function EditableMediaList({ owner, media, exec }: EditableProps) {
 			<div className="media-add">
 				<input
 					value={input}
+					aria-label="Link to a video or page"
 					placeholder="Paste a YouTube, Instagram, or web link"
 					onChange={(e) => {
 						setInput(e.target.value);

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Background, Controls, ReactFlow, type Connection, type NodeChange } from '@xyflow/react';
+import { Background, Controls, ReactFlow, type Connection, type EdgeChange, type NodeChange } from '@xyflow/react';
 import type { StrategyDoc } from '../model/strategy';
 import { toFlowEdges, toFlowNodes, type Point, type Selection, type Size, type StrategyFlowNode } from './flow';
 import { StrategyNodeView } from './StrategyNodeView';
@@ -33,8 +33,21 @@ export function StrategyCanvas({ doc, selection, onSelect, access }: Props) {
 		if (target) onSelect({ type: 'node', id: target.id });
 	}
 
+	function selectEdge(id: string) {
+		const target = doc.edges[id];
+		if (target) onSelect({ type: 'edge', id: target.id });
+	}
+
+	// Enter or Space on a focused node or edge reaches us as a select change, not a click.
+	function onEdgesChange(changes: EdgeChange[]) {
+		for (const change of changes) {
+			if (change.type === 'select' && change.selected) selectEdge(change.id);
+		}
+	}
+
 	function onNodesChange(changes: NodeChange<StrategyFlowNode>[]) {
 		for (const change of changes) {
+			if (change.type === 'select' && change.selected) selectNode(change.id);
 			if (change.type === 'dimensions' && change.dimensions) {
 				const size = change.dimensions;
 				setMeasured((prev) => {
@@ -56,13 +69,11 @@ export function StrategyCanvas({ doc, selection, onSelect, access }: Props) {
 			edges={edges}
 			nodeTypes={nodeTypes}
 			onNodesChange={onNodesChange}
+			onEdgesChange={onEdgesChange}
 			onConnect={access.mode === 'edit' ? access.onConnect : undefined}
 			onNodeClick={(_, node) => selectNode(node.id)}
 			onNodeDragStart={editing ? (_, node) => selectNode(node.id) : undefined}
-			onEdgeClick={(_, edge) => {
-				const target = doc.edges[edge.id];
-				if (target) onSelect({ type: 'edge', id: target.id });
-			}}
+			onEdgeClick={(_, edge) => selectEdge(edge.id)}
 			onPaneClick={() => onSelect(null)}
 			nodesDraggable={editing}
 			nodesConnectable={editing}
