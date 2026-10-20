@@ -4,8 +4,10 @@ import type { EdgeId, NodeId } from '../model/strategy';
 
 export type Selection = { type: 'node'; id: NodeId } | { type: 'edge'; id: EdgeId } | null;
 
-export type StrategyNodeData = { name: string; isRoot: boolean; mediaCount: number };
+export type StrategyNodeData = { name: string; isRoot: boolean; isEnd: boolean; mediaCount: number };
 export type StrategyFlowNode = Node<StrategyNodeData, 'strategy'>;
+export type StrategyEdgeData = { label: string; mediaCount: number };
+export type StrategyFlowEdge = Edge<StrategyEdgeData, 'strategy'>;
 export type Size = { width: number; height: number };
 
 const GRID_COLUMNS = 4;
@@ -20,10 +22,11 @@ function clipCount(count: number): string {
 	return count === 1 ? '1 clip' : `${count} clips`;
 }
 
-export function nodeAriaLabel(name: string, isRoot: boolean, mediaCount: number): string {
+export function nodeAriaLabel(name: string, isRoot: boolean, mediaCount: number, isEnd: boolean): string {
 	const parts = [name || 'Untitled'];
 	if (isRoot) parts.push('start');
 	if (mediaCount > 0) parts.push(clipCount(mediaCount));
+	if (isEnd) parts.push('line ends');
 	return parts.join(', ');
 }
 
@@ -41,17 +44,20 @@ export function toFlowNodes(
 	selection: Selection,
 	measured: Record<string, Size>,
 ): StrategyFlowNode[] {
+	const hasOutgoing = new Set(Object.values(doc.edges).map((edge) => edge.from));
 	return Object.values(doc.nodes).map((node, index) => {
 		const size = measured[node.id];
 		const isRoot = node.id === doc.rootNodeId;
+		const isEnd = !hasOutgoing.has(node.id);
 		return {
 			id: node.id,
 			type: 'strategy',
-			ariaLabel: nodeAriaLabel(node.name, isRoot, node.media.length),
+			ariaLabel: nodeAriaLabel(node.name, isRoot, node.media.length, isEnd),
 			position: doc.layout[node.id] ?? autoPosition(index),
 			data: {
 				name: node.name,
 				isRoot,
+				isEnd,
 				mediaCount: node.media.length,
 			},
 			selected: selection?.type === 'node' && selection.id === node.id,
@@ -60,21 +66,15 @@ export function toFlowNodes(
 	});
 }
 
-export function edgeLabel(edge: StrategyEdge): string {
-	if (edge.media.length === 0) return edge.label;
-	return edge.label === '' ? '▶' : `${edge.label} ▶`;
-}
-
-export function toFlowEdges(doc: StrategyDoc, selection: Selection): Edge[] {
+export function toFlowEdges(doc: StrategyDoc, selection: Selection): StrategyFlowEdge[] {
 	return Object.values(doc.edges).map((edge) => ({
 		id: edge.id,
+		type: 'strategy',
 		source: edge.from,
 		target: edge.to,
-		label: edgeLabel(edge),
+		data: { label: edge.label, mediaCount: edge.media.length },
 		ariaLabel: edgeAriaLabel(doc, edge),
 		markerEnd: { type: MarkerType.ArrowClosed },
-		labelBgPadding: [9, 2],
-		labelBgBorderRadius: 10,
 		selected: selection?.type === 'edge' && selection.id === edge.id,
 	}));
 }
@@ -102,13 +102,14 @@ function nodeRect(node: StrategyFlowNode): Rect {
 	};
 }
 
-export function occupiedRects(nodes: readonly StrategyFlowNode[], edges: readonly Edge[]): Rect[] {
+export function occupiedRects(nodes: readonly StrategyFlowNode[], edges: readonly StrategyFlowEdge[]): Rect[] {
 	const rects = new Map(nodes.map((node) => [node.id, nodeRect(node)]));
 	const labels = edges.flatMap((edge) => {
 		const from = rects.get(edge.source);
 		const to = rects.get(edge.target);
-		if (!from || !to || typeof edge.label !== 'string' || edge.label === '') return [];
-		const width = edge.label.length * LABEL_CHAR_WIDTH + LABEL_PADDING;
+		const label = edge.data?.label ?? '';
+		if (!from || !to || label === '') return [];
+		const width = label.length * LABEL_CHAR_WIDTH + LABEL_PADDING;
 		const centerX = (from.x + from.width / 2 + to.x + to.width / 2) / 2;
 		const centerY = (from.y + from.height + to.y) / 2;
 		return [{ x: centerX - width / 2, y: centerY - LABEL_HEIGHT / 2, width, height: LABEL_HEIGHT }];

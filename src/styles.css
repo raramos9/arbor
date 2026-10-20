@@ -201,8 +201,39 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .root-badge { padding: 0 8px; border-radius: 999px; background: var(--accent); color: #fff; }
 .node-name { font-size: 14px; line-height: 20px; font-weight: 500; overflow-wrap: anywhere; }
 
-.react-flow__edge-text { font-size: 12px; font-family: inherit; }
-.react-flow__edge-textbg { stroke: var(--border); stroke-width: 1; }
+.node { position: relative; }
+.line-end {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 8px);
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.edge-pill {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: auto;
+  max-width: 200px;
+  padding: 2px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: #3f3f46;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 400;
+  pointer-events: all;
+}
+.edge-pill:hover:not(:disabled) { background: var(--panel); border-color: var(--dot); }
+.edge-pill.selected, .edge-pill.selected:hover:not(:disabled) { border-color: var(--accent); }
+.edge-pill-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.edge-pill svg { flex: none; color: var(--muted); }
 
 .dialog {
   width: min(340px, calc(100vw - 32px));
@@ -215,7 +246,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 }
 .dialog::backdrop { background: rgba(24, 24, 27, 0.32); }
 
-.media-badge { font-weight: 700; color: var(--text); }
+.media-badge { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; color: var(--text); }
+.media-badge svg { color: var(--muted); }
 
 .media-section { display: flex; flex-direction: column; gap: 8px; }
 .media-section h3 { margin: 0; font-size: 12px; line-height: 16px; font-weight: 600; color: var(--muted); }

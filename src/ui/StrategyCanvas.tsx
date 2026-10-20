@@ -2,9 +2,11 @@ import { useMemo, useState } from 'react';
 import { Background, Controls, ReactFlow, type Connection, type EdgeChange, type NodeChange } from '@xyflow/react';
 import type { StrategyDoc } from '../model/strategy';
 import { toFlowEdges, toFlowNodes, type Point, type Selection, type Size, type StrategyFlowNode } from './flow';
+import { SelectEdgeContext, StrategyEdgeView } from './StrategyEdgeView';
 import { StrategyNodeView } from './StrategyNodeView';
 
 const nodeTypes = { strategy: StrategyNodeView };
+const edgeTypes = { strategy: StrategyEdgeView };
 
 type CanvasAccess =
 	| {
@@ -64,25 +66,28 @@ export function StrategyCanvas({ doc, selection, onSelect, access }: Props) {
 	}
 
 	return (
-		<ReactFlow
-			nodes={nodes}
-			edges={edges}
-			nodeTypes={nodeTypes}
-			onNodesChange={onNodesChange}
-			onEdgesChange={onEdgesChange}
-			onConnect={access.mode === 'edit' ? access.onConnect : undefined}
-			onNodeClick={(_, node) => selectNode(node.id)}
-			onNodeDragStart={editing ? (_, node) => selectNode(node.id) : undefined}
-			onEdgeClick={(_, edge) => selectEdge(edge.id)}
-			onPaneClick={() => onSelect(null)}
-			nodesDraggable={editing}
-			nodesConnectable={editing}
-			edgesReconnectable={editing}
-			deleteKeyCode={null}
-			fitView
-		>
-			<Background />
-			<Controls showInteractive={false} />
-		</ReactFlow>
+		<SelectEdgeContext.Provider value={selectEdge}>
+			<ReactFlow
+				nodes={nodes}
+				edges={edges}
+				nodeTypes={nodeTypes}
+				edgeTypes={edgeTypes}
+				onNodesChange={onNodesChange}
+				onEdgesChange={onEdgesChange}
+				onConnect={access.mode === 'edit' ? access.onConnect : undefined}
+				onNodeClick={(_, node) => selectNode(node.id)}
+				onNodeDragStart={editing ? (_, node) => selectNode(node.id) : undefined}
+				onEdgeClick={(_, edge) => selectEdge(edge.id)}
+				onPaneClick={() => onSelect(null)}
+				nodesDraggable={editing}
+				nodesConnectable={editing}
+				edgesReconnectable={editing}
+				deleteKeyCode={null}
+				fitView
+			>
+				<Background />
+				<Controls showInteractive={false} />
+			</ReactFlow>
+		</SelectEdgeContext.Provider>
 	);
 }
