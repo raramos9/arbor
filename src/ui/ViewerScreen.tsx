@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
-import type { PublishedStrategy } from '../model/publishing';
+import { forkPublished, type PublishedStrategy } from '../model/publishing';
 import { fetchPublished } from '../publishing';
+import { editorHref, navigate, publishedHref } from '../route';
+import { saveStrategy } from '../storage';
 import { cloud } from '../supabase';
 import type { Selection } from './flow';
 import { Inspector } from './Inspector';
@@ -74,8 +76,16 @@ export function ViewerScreen({ id }: { id: string }) {
 }
 
 function Viewer({ published }: { published: PublishedStrategy }) {
-	const { doc, owner, publishedAt } = published;
+	const { doc, owner, publishedAt, forkedFrom } = published;
 	const [selection, setSelection] = useState<Selection>(null);
+	const [forkError, setForkError] = useState<string | null>(null);
+
+	function onFork() {
+		const fork = forkPublished(published, new Date().toISOString());
+		const saved = saveStrategy(fork);
+		if (saved.ok) navigate(editorHref(fork.id));
+		else setForkError(saved.error);
+	}
 
 	return (
 		<div className="page editor-page">
@@ -84,6 +94,13 @@ function Viewer({ published }: { published: PublishedStrategy }) {
 				<h1>{doc.title || 'Untitled'}</h1>
 				<span className="muted">@{owner.handle}</span>
 				<span className="muted">Published {new Date(publishedAt).toLocaleDateString()}</span>
+				{forkedFrom && (
+					<span className="muted">
+						Forked from <a href={publishedHref(forkedFrom.id)}>{forkedFrom.title || 'Untitled'}</a> by @{forkedFrom.handle}
+					</span>
+				)}
+				<button onClick={onFork}>Fork into my strategies</button>
+				{forkError && <span className="error">{forkError}</span>}
 			</header>
 			<div className="editor">
 				<div className="canvas">
