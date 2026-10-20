@@ -1,13 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-	Background,
-	Controls,
-	ReactFlow,
-	ReactFlowProvider,
-	useReactFlow,
-	type Connection,
-	type NodeChange,
-} from '@xyflow/react';
+import { useEffect, useRef, useState } from 'react';
+import { ReactFlowProvider, useReactFlow, type Connection } from '@xyflow/react';
 import { exportStrategy } from '../exchange';
 import { exportFileName } from '../model/exchange';
 import type { ApplyResult, Command } from '../model/commands';
@@ -24,19 +16,14 @@ import {
 	findFreeSpot,
 	occupiedRects,
 	isInside,
-	toFlowEdges,
-	toFlowNodes,
 	type Point,
 	type Selection,
-	type Size,
 	type StrategyFlowNode,
 } from './flow';
 import { Inspector } from './Inspector';
 import { PublishControl } from './PublishControl';
-import { StrategyNodeView } from './StrategyNodeView';
+import { StrategyCanvas } from './StrategyCanvas';
 import { useEditor } from './useEditor';
-
-const nodeTypes = { strategy: StrategyNodeView };
 
 const SELECTED_NODE_GAP = 140;
 
@@ -78,17 +65,13 @@ function isEditable(target: EventTarget | null): boolean {
 
 function Editor({ initial }: { initial: StrategyDoc }) {
 	const { doc, run, persist, saveError } = useEditor(initial);
-	const { screenToFlowPosition, setCenter, getZoom } = useReactFlow();
+	const { screenToFlowPosition, setCenter, getZoom, getNodes, getEdges } = useReactFlow<StrategyFlowNode>();
 	const canvasRef = useRef<HTMLDivElement>(null);
 	const [selection, setSelection] = useState<Selection>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [focusField, setFocusField] = useState(false);
 	const [exporting, setExporting] = useState(false);
 	const [exportError, setExportError] = useState<string | null>(null);
-	const [measured, setMeasured] = useState<Record<string, Size>>({});
-
-	const nodes = useMemo(() => toFlowNodes(doc, selection, measured), [doc, selection, measured]);
-	const edges = useMemo(() => toFlowEdges(doc, selection), [doc, selection]);
 
 	function exec(cmd: Command, opts?: { persist?: boolean }): ApplyResult {
 		const result = run(cmd, opts);
@@ -138,6 +121,7 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 	}, []);
 
 	function placeNode(create: (id: NodeId, at: Point) => Command) {
+		const nodes = getNodes();
 		const selected = selection?.type === 'node' ? nodes.find((n) => n.id === selection.id) : undefined;
 		let candidate: Point;
 		if (selected) {
@@ -149,7 +133,7 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 				: { x: 0, y: 0 };
 			candidate = { x: center.x - NODE_SIZE.width / 2, y: center.y - NODE_SIZE.height / 2 };
 		}
-		const at = findFreeSpot(candidate, occupiedRects(nodes, edges));
+		const at = findFreeSpot(candidate, occupiedRects(nodes, getEdges()));
 		const nodeId = newNodeId();
 		const result = exec(create(nodeId, at));
 		if (result.ok) {
@@ -173,24 +157,9 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 		setCenter(at.x + NODE_SIZE.width / 2, at.y + NODE_SIZE.height / 2, { zoom: getZoom(), duration: 200 });
 	}
 
-	function onNodesChange(changes: NodeChange<StrategyFlowNode>[]) {
-		for (const change of changes) {
-			if (change.type === 'dimensions' && change.dimensions) {
-				const size = change.dimensions;
-				setMeasured((prev) => {
-					const current = prev[change.id];
-					if (current && current.width === size.width && current.height === size.height) return prev;
-					return { ...prev, [change.id]: size };
-				});
-			}
-			if (change.type === 'position') {
-				const node = doc.nodes[change.id];
-				if (node && change.position) {
-					run({ type: 'moveNode', id: node.id, at: change.position }, { persist: false });
-				}
-				if (change.dragging === false) persist();
-			}
-		}
+	function onMove(id: string, at: Point) {
+		const node = doc.nodes[id];
+		if (node) run({ type: 'moveNode', id: node.id, at }, { persist: false });
 	}
 
 	function onConnect(connection: Connection) {
@@ -221,39 +190,18 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 					<div className="toolbar">
 						<button onClick={addNode}>Add node</button>
 					</div>
-					<ReactFlow
-						nodes={nodes}
-						edges={edges}
-						nodeTypes={nodeTypes}
-						onNodesChange={onNodesChange}
-						onConnect={onConnect}
-						onNodeClick={(_, node) => {
-							const target = doc.nodes[node.id];
-							if (target) select({ type: 'node', id: target.id });
-						}}
-						onNodeDragStart={(_, node) => {
-							const target = doc.nodes[node.id];
-							if (target) select({ type: 'node', id: target.id });
-						}}
-						onEdgeClick={(_, edge) => {
-							const target = doc.edges[edge.id];
-							if (target) select({ type: 'edge', id: target.id });
-						}}
-						onPaneClick={() => select(null)}
-						deleteKeyCode={null}
-						fitView
-					>
-						<Background />
-						<Controls showInteractive={false} />
-					</ReactFlow>
+					<StrategyCanvas
+						doc={doc}
+						selection={selection}
+						onSelect={select}
+						access={{ mode: 'edit', onMove, onMoveEnd: persist, onConnect }}
+					/>
 				</div>
 				<Inspector
 					doc={doc}
 					selection={selection}
 					error={error}
-					focusField={focusField}
-					exec={exec}
-					onDeleted={() => select(null)}
+					access={{ mode: 'edit', exec, onDeleted: () => select(null), focusField }}
 				/>
 			</div>
 		</div>
