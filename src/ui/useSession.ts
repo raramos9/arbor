@@ -1,7 +1,8 @@
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import { useCallback, useEffect, useState } from 'react';
 import type { Database } from '../database.types';
-import { HandleSchema, UserIdSchema, type Handle, type UserId } from '../model/publishing';
+import { UserIdSchema, type UserId } from '../model/publishing';
+import { HandleSchema, type Handle } from '../model/strategy';
 
 export type SessionState =
 	| { status: 'loading' }

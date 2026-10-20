@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { PublishedId } from './model/publishing';
+import type { PublishedId } from './model/strategy';
 
 export type Route = { page: 'list' } | { page: 'editor'; id: string } | { page: 'published'; id: string };
 

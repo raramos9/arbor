@@ -1,7 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { useState, type FormEvent } from 'react';
 import type { Database } from '../database.types';
-import { parseHandle, type Handle, type UserId } from '../model/publishing';
+import { parseHandle, type UserId } from '../model/publishing';
+import type { Handle } from '../model/strategy';
 import { Dialog } from './Dialog';
 import { saveHandle } from './handle';
 

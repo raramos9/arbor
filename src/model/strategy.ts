@@ -59,6 +59,14 @@ export const StrategyEdgeSchema = z.object({
 	media: z.array(MediaSchema),
 });
 
+export const PublishedIdSchema = z.string().uuid().brand('PublishedId');
+export const HandleSchema = z
+	.string()
+	.regex(/^[a-z0-9][a-z0-9-]{1,22}[a-z0-9]$/)
+	.brand('Handle');
+
+const OriginSchema = z.object({ publishedId: PublishedIdSchema, title: z.string(), handle: HandleSchema });
+
 export const StrategyDocSchema = z.object({
 	schemaVersion: z.union([z.literal(1), z.literal(2)]).transform((): 2 => 2),
 	id: StrategyIdSchema,
@@ -72,8 +80,12 @@ export const StrategyDocSchema = z.object({
 	layout: z.record(z.string(), z.object({ x: z.number(), y: z.number() })),
 	createdAt: z.string(),
 	updatedAt: z.string(),
+	origin: OriginSchema.nullable().default(null),
 });
 
+export type PublishedId = z.infer<typeof PublishedIdSchema>;
+export type Handle = z.infer<typeof HandleSchema>;
+export type Origin = z.infer<typeof OriginSchema>;
 export type StrategyId = z.infer<typeof StrategyIdSchema>;
 export type NodeId = z.infer<typeof NodeIdSchema>;
 export type EdgeId = z.infer<typeof EdgeIdSchema>;
@@ -148,5 +160,6 @@ export function createStrategy(args: {
 		layout: {},
 		createdAt: now,
 		updatedAt: now,
+		origin: null,
 	};
 }
