@@ -105,6 +105,27 @@ input, select, textarea {
   display: flex;
   gap: 8px;
 }
+.toolbar button { white-space: nowrap; }
+
+.notice-bar {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+}
+.notice-bar:not(:empty) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 6px 6px 14px;
+  border-radius: 8px;
+  background: var(--text);
+  color: var(--panel);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+.notice-bar button { background: transparent; color: inherit; border-color: rgba(255, 255, 255, 0.4); }
+.notice-bar button:hover:not(:disabled) { border-color: var(--panel); }
 
 .inspector {
   width: 300px;

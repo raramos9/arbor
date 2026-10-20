@@ -27,6 +27,7 @@ import { StrategyCanvas } from './StrategyCanvas';
 import { useEditor } from './useEditor';
 
 const SELECTED_NODE_GAP = 140;
+const NOTICE_MS = 8000;
 
 function download(blob: Blob, fileName: string) {
 	const url = URL.createObjectURL(blob);
@@ -64,8 +65,22 @@ function isEditable(target: EventTarget | null): boolean {
 	return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
 }
 
+function deletedName(doc: StrategyDoc, cmd: Command): string | null {
+	if (cmd.type === 'deleteNode') return `“${doc.nodes[cmd.id]?.name || 'Untitled'}”`;
+	if (cmd.type === 'deleteEdge') {
+		const edge = doc.edges[cmd.id];
+		return edge?.label ? `connection “${edge.label}”` : 'connection';
+	}
+	if (cmd.type === 'removeMedia') {
+		const owner = cmd.owner.type === 'node' ? doc.nodes[cmd.owner.id] : doc.edges[cmd.owner.id];
+		const title = owner?.media[cmd.index]?.title;
+		return title ? `“${title}”` : 'clip';
+	}
+	return null;
+}
+
 function Editor({ initial }: { initial: StrategyDoc }) {
-	const { doc, run, persist, saveError } = useEditor(initial);
+	const { doc, run, persist, saveError, undo, redo, canUndo, canRedo } = useEditor(initial);
 	const { screenToFlowPosition, setCenter, getZoom, getNodes, getEdges } = useReactFlow<StrategyFlowNode>();
 	const canvasRef = useRef<HTMLDivElement>(null);
 	const [selection, setSelection] = useState<Selection>(null);
@@ -73,12 +88,34 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 	const [focusField, setFocusField] = useState(false);
 	const [exporting, setExporting] = useState(false);
 	const [exportError, setExportError] = useState<string | null>(null);
+	const [notice, setNotice] = useState<string | null>(null);
 
 	function exec(cmd: Command, opts?: { persist?: boolean }): ApplyResult {
+		const deleted = deletedName(doc, cmd);
 		const result = run(cmd, opts);
 		setError(result.ok ? null : result.reason);
+		if (result.ok) setNotice(deleted && `Deleted ${deleted}`);
 		return result;
 	}
+
+	function step(direction: 'undo' | 'redo') {
+		if ((direction === 'undo' ? undo : redo)()) {
+			setNotice(null);
+			setError(null);
+		}
+	}
+
+	useEffect(() => {
+		if (!notice) return;
+		const timer = setTimeout(() => setNotice(null), NOTICE_MS);
+		return () => clearTimeout(timer);
+	}, [notice]);
+
+	useEffect(() => {
+		if (!selection) return;
+		const exists = selection.type === 'node' ? doc.nodes[selection.id] : doc.edges[selection.id];
+		if (!exists) setSelection(null);
+	}, [doc, selection]);
 
 	async function onExport() {
 		setExporting(true);
@@ -107,15 +144,21 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 		if (exec(cmd).ok) select(null);
 	}
 
-	const deleteRef = useRef(deleteSelection);
-	deleteRef.current = deleteSelection;
+	const keys = useRef({ deleteSelection, step });
+	keys.current = { deleteSelection, step };
 
 	useEffect(() => {
 		const onKey = (e: KeyboardEvent) => {
-			if (e.key !== 'Delete' && e.key !== 'Backspace') return;
 			if (isEditable(e.target)) return;
+			const key = e.key.toLowerCase();
+			if ((e.metaKey || e.ctrlKey) && !e.altKey && (key === 'z' || key === 'y')) {
+				e.preventDefault();
+				keys.current.step(key === 'y' || e.shiftKey ? 'redo' : 'undo');
+				return;
+			}
+			if (e.key !== 'Delete' && e.key !== 'Backspace') return;
 			e.preventDefault();
-			deleteRef.current();
+			keys.current.deleteSelection();
 		};
 		window.addEventListener('keydown', onKey);
 		return () => window.removeEventListener('keydown', onKey);
@@ -195,6 +238,24 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 				<div className="canvas" ref={canvasRef}>
 					<div className="toolbar">
 						<button onClick={addNode}>Add node</button>
+						<button onClick={() => step('undo')} disabled={!canUndo} aria-keyshortcuts="Meta+Z Control+Z">
+							Undo
+						</button>
+						<button
+							onClick={() => step('redo')}
+							disabled={!canRedo}
+							aria-keyshortcuts="Meta+Shift+Z Control+Shift+Z Control+Y"
+						>
+							Redo
+						</button>
+					</div>
+					<div className="notice-bar" role="status">
+						{notice && (
+							<>
+								<span>{notice}</span>
+								<button onClick={() => step('undo')}>Undo</button>
+							</>
+						)}
 					</div>
 					<StrategyCanvas
 						doc={doc}
