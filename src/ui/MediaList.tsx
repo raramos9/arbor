@@ -18,17 +18,49 @@ type ClipMedia = Extract<Media, { provider: 'clip' }>;
 const MAX_CLIP_BYTES = 300 * 1024 * 1024;
 const MEGABYTE = 1024 * 1024;
 
+type MediaAccess = { mode: 'edit'; owner: MediaOwner; exec: (cmd: Command) => ApplyResult } | { mode: 'view' };
+
 type Props = {
-	owner: MediaOwner;
 	media: readonly Media[];
-	exec: (cmd: Command) => ApplyResult;
+	access: MediaAccess;
 };
 
 function mediaKey(media: Media, index: number): string {
 	return media.provider === 'clip' ? `${index}:${media.clipId}` : `${index}:${media.url}`;
 }
 
-export function MediaList({ owner, media, exec }: Props) {
+export function MediaList({ media, access }: Props) {
+	switch (access.mode) {
+		case 'edit':
+			return <EditableMediaList owner={access.owner} media={media} exec={access.exec} />;
+		case 'view':
+			return media.length === 0 ? null : <ReadOnlyMediaList media={media} />;
+		default: {
+			const unreachable: never = access;
+			return unreachable;
+		}
+	}
+}
+
+function ReadOnlyMediaList({ media }: { media: readonly Media[] }) {
+	return (
+		<section className="media-section">
+			<h3>Media</h3>
+			<ul className="media-list">
+				{media.map((item, index) => (
+					<li key={mediaKey(item, index)} className="media-item">
+						{item.title !== '' && <p className="read-text">{item.title}</p>}
+						<MediaPreview media={item} />
+					</li>
+				))}
+			</ul>
+		</section>
+	);
+}
+
+type EditableProps = { owner: MediaOwner; media: readonly Media[]; exec: (cmd: Command) => ApplyResult };
+
+function EditableMediaList({ owner, media, exec }: EditableProps) {
 	const [input, setInput] = useState('');
 	const [error, setError] = useState<string | null>(null);
 	const [saving, setSaving] = useState(false);

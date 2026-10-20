@@ -55,3 +55,12 @@ export function SelectField<T extends string>({ label, value, options, onChange 
 		</label>
 	);
 }
+
+export function ReadField({ label, value }: { label: string; value: string }) {
+	return (
+		<div className="read-field">
+			<span className="read-label">{label}</span>
+			<p className="read-text">{value}</p>
+		</div>
+	);
+}

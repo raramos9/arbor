@@ -228,3 +228,8 @@ input, select, textarea {
 .confirm p { margin: 0; }
 
 .account { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+
+.read-field { display: flex; flex-direction: column; gap: 4px; }
+.read-label { font-weight: 600; }
+.read-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.read-title { margin: 0; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
