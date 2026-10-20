@@ -3,11 +3,13 @@ import { deleteClip, listClipIds } from '../clips';
 import { importStrategy, readArborFile } from '../exchange';
 import { planImport, type ArborFile } from '../model/exchange';
 import { unreferencedClips } from '../model/media';
+import { positionName, type Position } from '../model/positions';
 import { createStrategy, RulesetSchema, SideSchema, type Ruleset, type Side, type StrategyDoc } from '../model/strategy';
 import { editorHref, exploreHref, navigate } from '../route';
 import { hasStrategy, listStrategies, loadStrategy, saveStrategy } from '../storage';
 import { cloud } from '../supabase';
 import { AccountControl } from './AccountControl';
+import { PositionField } from './PositionField';
 
 type ImportState =
 	| { kind: 'idle' }
@@ -23,7 +25,7 @@ async function collectClips(docs: StrategyDoc[]) {
 export function ListScreen() {
 	const [entries] = useState(listStrategies);
 	const [title, setTitle] = useState('');
-	const [rootName, setRootName] = useState('');
+	const [position, setPosition] = useState<Position | null>({ kind: 'listed', id: 'closed-guard' });
 	const [ruleset, setRuleset] = useState<Ruleset>('both');
 	const [side, setSide] = useState<Side>('bottom');
 	const [error, setError] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export function ListScreen() {
 		void collectClips(docs);
 	}, [entries]);
 
-	const valid = title.trim() !== '' && rootName.trim() !== '';
+	const valid = title.trim() !== '' && position !== null;
 	const sorted = [...entries].sort((a, b) => {
 		if (!a.ok || !b.ok) return Number(a.ok) - Number(b.ok);
 		return b.doc.updatedAt.localeCompare(a.doc.updatedAt);
@@ -44,10 +46,10 @@ export function ListScreen() {
 
 	function onSubmit(e: FormEvent) {
 		e.preventDefault();
-		if (!valid) return;
+		if (!valid || !position) return;
 		const doc = createStrategy({
 			title: title.trim(),
-			position: { kind: 'other', name: rootName.trim() },
+			position,
 			ruleset,
 			startingSide: side,
 		});
@@ -154,6 +156,7 @@ export function ListScreen() {
 									<a href={editorHref(entry.id)}>
 										<strong>{entry.doc.title || 'Untitled'}</strong>
 										<span className="muted">
+											{entry.doc.position && `${positionName(entry.doc.position)} · `}
 											{entry.doc.ruleset} · starts {entry.doc.startingSide}
 										</span>
 									</a>
@@ -176,10 +179,7 @@ export function ListScreen() {
 							Title
 							<input value={title} onChange={(e) => setTitle(e.target.value)} />
 						</label>
-						<label>
-							Starting position
-							<input value={rootName} onChange={(e) => setRootName(e.target.value)} placeholder="Open guard" />
-						</label>
+						<PositionField value={position} onChange={setPosition} allowNone={false} />
 						<label>
 							Ruleset
 							<select value={ruleset} onChange={(e) => setRuleset(RulesetSchema.parse(e.target.value))}>
