@@ -58,6 +58,11 @@ describe('occupiedRects', () => {
 	it('reserves nothing for an unlabeled connection', () => {
 		expect(occupiedRects(nodes, [edge('')])).toHaveLength(2);
 	});
+
+	it('reserves no wider than the truncated pill for a long reaction', () => {
+		const [, , label] = occupiedRects(nodes, [edge('He '.repeat(100))]);
+		expect(label?.width).toBe(200);
+	});
 });
 
 describe('isInside', () => {
