@@ -1,12 +1,20 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Database } from '../database.types';
+import { parseAuthRedirectError } from './authRedirect';
 import { SignInDialog } from './SignInDialog';
 import { useSession } from './useSession';
 
 export function AccountControl({ client }: { client: SupabaseClient<Database> }) {
 	const session = useSession(client);
 	const [signingIn, setSigningIn] = useState(false);
+	const [redirectError, setRedirectError] = useState(() => parseAuthRedirectError(window.location.hash));
+
+	useEffect(() => {
+		if (redirectError !== null) {
+			history.replaceState(null, '', window.location.pathname + window.location.search);
+		}
+	}, [redirectError]);
 
 	switch (session.status) {
 		case 'loading':
@@ -14,7 +22,14 @@ export function AccountControl({ client }: { client: SupabaseClient<Database> })
 		case 'signed-out':
 			return (
 				<div className="account">
-					<button type="button" onClick={() => setSigningIn(true)}>
+					{redirectError && <p className="error">{redirectError}</p>}
+					<button
+						type="button"
+						onClick={() => {
+							setRedirectError(null);
+							setSigningIn(true);
+						}}
+					>
 						Sign in
 					</button>
 					{signingIn && <SignInDialog client={client} onClose={() => setSigningIn(false)} />}
