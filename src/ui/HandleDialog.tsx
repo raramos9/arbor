@@ -61,7 +61,7 @@ export function HandleDialog({
 					<button type="button" onClick={onClose}>
 						Cancel
 					</button>
-					<button type="submit" disabled={input.trim() === '' || state.kind === 'saving'}>
+					<button type="submit" className="primary" disabled={input.trim() === '' || state.kind === 'saving'}>
 						{state.kind === 'saving' ? 'Saving…' : 'Save'}
 					</button>
 				</div>

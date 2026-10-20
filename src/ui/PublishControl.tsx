@@ -194,7 +194,7 @@ export function PublishControl({ client, doc }: { client: SupabaseClient<Databas
 								<button type="button" onClick={closeDialog}>
 									Cancel
 								</button>
-								<button type="button" onClick={() => void onConfirmPublish()} disabled={busy}>
+								<button type="button" className="primary" onClick={() => void onConfirmPublish()} disabled={busy}>
 									{busy ? 'Publishing…' : 'Publish'}
 								</button>
 							</div>
@@ -230,13 +230,13 @@ export function PublishControl({ client, doc }: { client: SupabaseClient<Databas
 		switch (remote.kind) {
 			case 'checking':
 				return (
-					<button type="button" disabled>
+					<button type="button" className="primary" disabled>
 						Publish
 					</button>
 				);
 			case 'unpublished':
 				return (
-					<button type="button" onClick={onPublishClick}>
+					<button type="button" className="primary" onClick={onPublishClick}>
 						Publish
 					</button>
 				);
@@ -244,7 +244,7 @@ export function PublishControl({ client, doc }: { client: SupabaseClient<Databas
 				return (
 					<>
 						<span className="error">{remote.message}</span>
-						<button type="button" onClick={onPublishClick}>
+						<button type="button" className="primary" onClick={onPublishClick}>
 							Publish
 						</button>
 					</>
@@ -257,7 +257,7 @@ export function PublishControl({ client, doc }: { client: SupabaseClient<Databas
 							{copied ? 'Copied' : 'Copy link'}
 						</button>
 						{hasChanges(doc, remote.publishedDoc) && (
-							<button type="button" onClick={() => void runPublish()} disabled={busy}>
+							<button type="button" className="primary" onClick={() => void runPublish()} disabled={busy}>
 								{busy ? 'Updating…' : 'Update'}
 							</button>
 						)}

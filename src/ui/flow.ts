@@ -73,6 +73,8 @@ export function toFlowEdges(doc: StrategyDoc, selection: Selection): Edge[] {
 		label: edgeLabel(edge),
 		ariaLabel: edgeAriaLabel(doc, edge),
 		markerEnd: { type: MarkerType.ArrowClosed },
+		labelBgPadding: [9, 2],
+		labelBgBorderRadius: 10,
 		selected: selection?.type === 'edge' && selection.id === edge.id,
 	}));
 }
