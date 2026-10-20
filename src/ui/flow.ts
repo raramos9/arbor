@@ -92,6 +92,7 @@ function overlaps(a: Rect, b: Rect): boolean {
 const LABEL_CHAR_WIDTH = 8;
 const LABEL_PADDING = 16;
 const LABEL_HEIGHT = 32;
+const LABEL_MAX_WIDTH = 200;
 
 function nodeRect(node: StrategyFlowNode): Rect {
 	return {
@@ -109,7 +110,7 @@ export function occupiedRects(nodes: readonly StrategyFlowNode[], edges: readonl
 		const to = rects.get(edge.target);
 		const label = edge.data?.label ?? '';
 		if (!from || !to || label === '') return [];
-		const width = label.length * LABEL_CHAR_WIDTH + LABEL_PADDING;
+		const width = Math.min(label.length * LABEL_CHAR_WIDTH + LABEL_PADDING, LABEL_MAX_WIDTH);
 		const centerX = (from.x + from.width / 2 + to.x + to.width / 2) / 2;
 		const centerY = (from.y + from.height + to.y) / 2;
 		return [{ x: centerX - width / 2, y: centerY - LABEL_HEIGHT / 2, width, height: LABEL_HEIGHT }];
