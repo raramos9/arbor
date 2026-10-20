@@ -22,11 +22,11 @@ function displayName(name: string): string {
 	return name || 'Untitled';
 }
 
-function ancestorsOfLit(step: OutlineStep, selection: Selection): NodeId[] | null {
+function ancestorsOf(step: OutlineStep, isTarget: (entry: OutlineEntry) => boolean): NodeId[] | null {
 	for (const entry of step.next) {
-		if (isLit(entry, selection)) return [step.node];
+		if (isTarget(entry)) return [step.node];
 		if (entry.kind === 'step') {
-			const deeper = ancestorsOfLit(entry, selection);
+			const deeper = ancestorsOf(entry, isTarget);
 			if (deeper) return [step.node, ...deeper];
 		}
 	}
@@ -40,18 +40,30 @@ export function OutlinePane({ doc, selection, onSelectEntry }: Props) {
 	const paneRef = useRef<HTMLElement>(null);
 	const outline = toOutline(doc);
 
-	// A new selection reopens collapsed branches above it so the lit row is visible.
-	if (selection !== seenSelection) {
-		setSeenSelection(selection);
-		const ancestors = [outline.start, ...outline.unlinked].flatMap((line) => ancestorsOfLit(line, selection) ?? []);
+	function ancestorsMatching(isTarget: (entry: OutlineEntry) => boolean): NodeId[] {
+		return [outline.start, ...outline.unlinked].flatMap((line) => ancestorsOf(line, isTarget) ?? []);
+	}
+
+	function reveal(ancestors: readonly NodeId[]) {
 		if (ancestors.some((id) => collapsed.has(id))) {
 			setCollapsed(new Set([...collapsed].filter((id) => !ancestors.includes(id))));
 		}
 	}
 
+	// A new selection reopens collapsed branches above it so the lit row is visible.
+	if (selection !== seenSelection) {
+		setSeenSelection(selection);
+		reveal(ancestorsMatching((entry) => isLit(entry, selection)));
+	}
+
 	useEffect(() => {
 		paneRef.current?.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'nearest' });
 	}, [selection, hidden]);
+
+	function selectEntry(entry: OutlineEntry) {
+		if (entry.kind === 'jump') reveal(ancestorsMatching((other) => other.kind === 'step' && other.node === entry.node));
+		onSelectEntry(entry);
+	}
 
 	function toggle(id: NodeId) {
 		setCollapsed((prev) => {
@@ -92,7 +104,7 @@ export function OutlinePane({ doc, selection, onSelectEntry }: Props) {
 					) : (
 						<span className="line-disclosure-gap" />
 					)}
-					<button className="line-row" aria-current={lit ? 'true' : undefined} onClick={() => onSelectEntry(entry)}>
+					<button className="line-row" aria-current={lit ? 'true' : undefined} onClick={() => selectEntry(entry)}>
 						<span className="line-text">
 							{label && <span className="line-label">{label}</span>}
 							{phrase !== null && <em>{phrase}</em>}
