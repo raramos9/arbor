@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
 import { forkPublished, type PublishedStrategy } from '../model/publishing';
 import { fetchPublished } from '../publishing';
-import { editorHref, navigate, publishedHref } from '../route';
+import { editorHref, navigate, profileHref, publishedHref } from '../route';
 import { saveStrategy } from '../storage';
 import { cloud } from '../supabase';
 import type { Selection } from './flow';
@@ -92,11 +92,11 @@ function Viewer({ published }: { published: PublishedStrategy }) {
 			<header className="header">
 				<a href="#/">Strategies</a>
 				<h1>{doc.title || 'Untitled'}</h1>
-				<span className="muted">@{owner.handle}</span>
+				<a href={profileHref(owner.handle)}>@{owner.handle}</a>
 				<span className="muted">Published {new Date(publishedAt).toLocaleDateString()}</span>
 				{forkedFrom && (
 					<span className="muted">
-						Forked from <a href={publishedHref(forkedFrom.id)}>{forkedFrom.title || 'Untitled'}</a> by @{forkedFrom.handle}
+						Forked from <a href={publishedHref(forkedFrom.id)}>{forkedFrom.title || 'Untitled'}</a> by <a href={profileHref(forkedFrom.handle)}>@{forkedFrom.handle}</a>
 					</span>
 				)}
 				<button onClick={onFork}>Fork into my strategies</button>
