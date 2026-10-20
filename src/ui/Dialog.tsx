@@ -19,8 +19,11 @@ export function Dialog({ label, onClose, children }: { label: string; onClose: (
 			e.preventDefault();
 			closeRef.current();
 		};
-		// Chrome's close watcher can close the dialog without firing cancel.
-		const onNativeClose = () => closeRef.current();
+		// Chrome's close watcher can close the dialog without firing cancel. A close
+		// queued by a previous cleanup arrives after showModal() reopened it; ignore that.
+		const onNativeClose = () => {
+			if (!dialog.open) closeRef.current();
+		};
 		dialog.addEventListener('cancel', onCancel);
 		dialog.addEventListener('close', onNativeClose);
 		return () => {
