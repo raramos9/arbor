@@ -43,12 +43,12 @@ describe('occupiedRects', () => {
 		data: { name: id, isRoot: false, isEnd: false, mediaCount: 0 },
 	});
 	const nodes = [node('a', 0), node('b', 300)];
-	const edge = (label: string): StrategyFlowEdge => ({
+	const edge = (label: string, mediaCount = 0): StrategyFlowEdge => ({
 		id: 'e',
 		type: 'strategy',
 		source: 'a',
 		target: 'b',
-		data: { label, mediaCount: 0 },
+		data: { label, mediaCount },
 	});
 
 	it('keeps a new node below a connected node off the label', () => {
@@ -59,6 +59,18 @@ describe('occupiedRects', () => {
 
 	it('reserves nothing for an unlabeled connection', () => {
 		expect(occupiedRects(nodes, [edge('')])).toHaveLength(2);
+	});
+
+	it('reserves the icon pill for a clip-only connection', () => {
+		const [, , pill] = occupiedRects(nodes, [edge('', 1)]);
+		expect(pill?.width).toBeGreaterThan(0);
+		expect(pill?.width).toBeLessThan(40);
+	});
+
+	it('reserves more for a reaction that also has clips', () => {
+		const [, , plain] = occupiedRects(nodes, [edge('Circles in')]);
+		const [, , withClip] = occupiedRects(nodes, [edge('Circles in', 1)]);
+		expect(withClip!.width).toBeGreaterThan(plain!.width);
 	});
 
 	it('reserves no wider than the truncated pill for a long reaction', () => {
