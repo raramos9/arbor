@@ -16,6 +16,9 @@ import {
 	NODE_SIZE,
 	findFreeSpot,
 	occupiedRects,
+	reactionSource,
+	reactionSpot,
+	type Rect,
 	type Point,
 	type Selection,
 	type StrategyFlowEdge,
@@ -196,6 +199,25 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 		placeNode((id, at) => ({ type: 'addNode', id, name: 'New node', at }));
 	}
 
+	function addReaction() {
+		const from = reactionSource(doc, selection);
+		const flowNode = getNodes().find((n) => n.id === from);
+		const origin = flowNode?.position ?? doc.layout[from] ?? { x: 0, y: 0 };
+		const source: Rect = {
+			...origin,
+			width: flowNode?.measured?.width ?? NODE_SIZE.width,
+			height: flowNode?.measured?.height ?? NODE_SIZE.height,
+		};
+		const childCount = Object.values(doc.edges).filter((edge) => edge.from === from).length;
+		const at = reactionSpot(source, childCount, occupiedRects(getNodes(), getEdges()));
+		const edge = newEdgeId();
+		const result = exec({ type: 'addReaction', from, edge, node: newNodeId(), at });
+		if (!result.ok) return;
+		setSelection({ type: 'edge', id: edge });
+		setFocusField(true);
+		revealAt(at);
+	}
+
 	function selectEntry(entry: OutlineEntry) {
 		select(entrySelection(entry));
 		revealNode(entry.node);
@@ -251,6 +273,13 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 				<OutlinePane doc={doc} selection={selection} onSelectEntry={selectEntry} />
 				<div className="canvas" ref={canvasRef}>
 					<div className="toolbar">
+						<button
+							className="primary"
+							onClick={addReaction}
+							aria-label={`Add a reaction after ${doc.nodes[reactionSource(doc, selection)]?.name || 'Untitled'}`}
+						>
+							+ Reaction
+						</button>
 						<button onClick={addNode}>Add node</button>
 					</div>
 					<div className="notice-bar" role="status">
@@ -272,7 +301,7 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 					doc={doc}
 					selection={selection}
 					error={error}
-					access={{ mode: 'edit', exec, onDeleted: () => select(null), focusField }}
+					access={{ mode: 'edit', exec, onDeleted: () => select(null), focusField, onAddReaction: addReaction }}
 				/>
 			</div>
 		</div>

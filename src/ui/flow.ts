@@ -134,3 +134,23 @@ export function isInside(rect: Rect, view: Rect): boolean {
 		rect.y + rect.height <= view.y + view.height
 	);
 }
+
+const REACTION_GAP_X = 40;
+const REACTION_GAP_Y = 60;
+
+export function reactionSource(doc: StrategyDoc, selection: Selection): NodeId {
+	if (selection?.type === 'node' && doc.nodes[selection.id]) return selection.id;
+	if (selection?.type === 'edge') {
+		const edge = doc.edges[selection.id];
+		if (edge) return edge.to;
+	}
+	return doc.rootNodeId;
+}
+
+export function reactionSpot(source: Rect, childCount: number, occupied: readonly Rect[]): Point {
+	const candidate = {
+		x: source.x + childCount * (NODE_SIZE.width + REACTION_GAP_X),
+		y: source.y + source.height + REACTION_GAP_Y,
+	};
+	return findFreeSpot(candidate, occupied);
+}
