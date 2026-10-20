@@ -7,6 +7,7 @@ import { findMine, publish, unpublish } from '../publishing';
 import { publishedHref } from '../route';
 import { Dialog } from './Dialog';
 import { HandleDialog } from './HandleDialog';
+import { clearPendingPublish, rememberPendingPublish, takePendingPublish } from './pendingPublish';
 import { SignInDialog } from './SignInDialog';
 import { useSession } from './useSession';
 
@@ -24,6 +25,16 @@ type DialogState =
 	| { kind: 'confirm-unpublish' };
 
 const COPIED_MS = 2000;
+
+function usePageVisible(): boolean {
+	const [visible, setVisible] = useState(() => !document.hidden);
+	useEffect(() => {
+		const onChange = () => setVisible(!document.hidden);
+		document.addEventListener('visibilitychange', onChange);
+		return () => document.removeEventListener('visibilitychange', onChange);
+	}, []);
+	return visible;
+}
 
 export function PublishControl({ client, doc }: { client: SupabaseClient<Database>; doc: StrategyDoc }) {
 	const [session, setHandle] = useSession(client);
@@ -58,7 +69,17 @@ export function PublishControl({ client, doc }: { client: SupabaseClient<Databas
 
 	useEffect(() => {
 		if (session.status !== 'signed-in') setDialog({ kind: 'none' });
+		else setDialog((d) => (d.kind === 'signing-in' ? { kind: 'none' } : d));
 	}, [session.status]);
+
+	const settled = session.status === 'signed-in' && (remote.kind === 'unpublished' || remote.kind === 'published');
+	const resumeTo = session.status === 'signed-in' && remote.kind === 'unpublished' ? (session.handle ? 'confirm-publish' : 'choosing-handle') : null;
+	// A magic link signs in every open tab; resume only in the one the user is looking at.
+	const visible = usePageVisible();
+	useEffect(() => {
+		if (!settled || !visible || !takePendingPublish(docId)) return;
+		if (resumeTo) setDialog({ kind: resumeTo });
+	}, [settled, visible, resumeTo, docId]);
 
 	useEffect(() => {
 		if (!copied) return;
@@ -114,7 +135,10 @@ export function PublishControl({ client, doc }: { client: SupabaseClient<Databas
 
 	function onPublishClick() {
 		setActionError(null);
-		if (session.status === 'signed-out') setDialog({ kind: 'signing-in' });
+		if (session.status === 'signed-out') {
+			rememberPendingPublish(docId);
+			setDialog({ kind: 'signing-in' });
+		}
 		else if (session.status === 'signed-in') {
 			setDialog({ kind: session.handle ? 'confirm-publish' : 'choosing-handle' });
 		}
@@ -129,7 +153,17 @@ export function PublishControl({ client, doc }: { client: SupabaseClient<Databas
 			case 'none':
 				return null;
 			case 'signing-in':
-				return <SignInDialog client={client} onClose={closeDialog} />;
+				return (
+					<SignInDialog
+						client={client}
+						title="Sign in to publish"
+						detail={`Publishing ${doc.title.trim() ? `“${doc.title.trim()}”` : 'this strategy'} needs an account. You’ll come back here after signing in.`}
+						onClose={(started) => {
+							if (!started) clearPendingPublish();
+							closeDialog();
+						}}
+					/>
+				);
 			case 'choosing-handle':
 				return session.status === 'signed-in' ? (
 					<HandleDialog
