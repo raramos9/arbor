@@ -239,6 +239,8 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 		setFocusField(true);
 	}
 
+	const isBlank = Object.keys(doc.nodes).length === 1 && Object.keys(doc.edges).length === 0;
+
 	return (
 		<div className="page editor-page">
 			<header className="header">
@@ -282,6 +284,12 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 						</button>
 						<button onClick={addNode}>Add node</button>
 					</div>
+					{isBlank && (
+						<div className="canvas-hint">
+							<span>What does he do first?</span>
+							<button onClick={addReaction}>+ Reaction</button>
+						</div>
+					)}
 					<div className="notice-bar" role="status">
 						{notice && (
 							<>

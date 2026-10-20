@@ -203,6 +203,25 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 }
 .toolbar button { white-space: nowrap; }
 
+.canvas-hint {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 6px 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+
 .notice-bar {
   position: absolute;
   bottom: 16px;
