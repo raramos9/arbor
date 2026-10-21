@@ -129,8 +129,8 @@ export function previewLines(outline: Outline, limit: number): { lines: PreviewL
 	grow(childItems(outline.start.next, 0), roots);
 	let total = 0;
 	for (let next = work.pop(); next; next = work.pop()) {
-		total += 1;
 		const { node, item } = next;
+		if (item.kind !== 'group') total += 1;
 		if (item.kind === 'group') {
 			grow(item.entries.map((entry) => ({ kind: 'entry', entry, depth: item.depth + 1, grouped: true })), node.children);
 		} else if (item.entry.kind === 'step') {
@@ -138,11 +138,15 @@ export function previewLines(outline: Outline, limit: number): { lines: PreviewL
 		}
 	}
 
+	// A group line only introduces its outcomes, so it costs none of the budget.
 	const picked = new Set<PreviewNode>();
 	const queue = [...roots];
-	for (let head = 0; head < queue.length && picked.size < limit; head++) {
-		picked.add(queue[head]!);
-		queue.push(...queue[head]!.children);
+	let shown = 0;
+	for (let head = 0; head < queue.length && shown < limit; head++) {
+		const node = queue[head]!;
+		picked.add(node);
+		if (!('options' in node.line)) shown += 1;
+		for (const child of node.children) queue.push(child);
 	}
 
 	const lines: PreviewLine[] = [];
@@ -152,7 +156,7 @@ export function previewLines(outline: Outline, limit: number): { lines: PreviewL
 		lines.push(node.line);
 		for (let i = node.children.length - 1; i >= 0; i--) stack.push(node.children[i]!);
 	}
-	return { lines, more: total - lines.length };
+	return { lines, more: total - shown };
 }
 
 export function isLit(entry: OutlineEntry, selection: Selection): boolean {
