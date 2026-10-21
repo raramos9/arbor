@@ -29,17 +29,34 @@ export function toOutline(doc: StrategyDoc): Outline {
 		else outgoing.set(edge.from, [edge]);
 	}
 	const visited = new Set<NodeId>();
-	const path = new Set<NodeId>();
 
+	const stepAt = (node: NodeId, via: StrategyEdge | null): OutlineStep => ({
+		kind: 'step',
+		edge: via?.id ?? null,
+		reaction: via?.label ?? '',
+		node,
+		name: doc.nodes[node]?.name ?? '',
+		next: [],
+	});
+
+	// Iterative because published docs are untrusted: a long enough chain overflows the call stack.
 	function expand(node: NodeId, via: StrategyEdge | null): OutlineStep {
+		const top = stepAt(node, via);
 		visited.add(node);
-		path.add(node);
-		const next: OutlineEntry[] = [];
-		for (const edge of outgoing.get(node) ?? []) {
+		const path = new Set<NodeId>([node]);
+		const stack = [{ step: top, edges: outgoing.get(node) ?? [], index: 0 }];
+		while (stack.length > 0) {
+			const frame = stack[stack.length - 1]!;
+			const edge = frame.edges[frame.index++];
+			if (!edge) {
+				path.delete(frame.step.node);
+				stack.pop();
+				continue;
+			}
 			const target = doc.nodes[edge.to];
 			if (!target) continue;
 			if (visited.has(target.id)) {
-				next.push({
+				frame.step.next.push({
 					kind: 'jump',
 					edge: edge.id,
 					reaction: edge.label,
@@ -47,19 +64,15 @@ export function toOutline(doc: StrategyDoc): Outline {
 					name: target.name,
 					back: path.has(target.id),
 				});
-			} else {
-				next.push(expand(target.id, edge));
+				continue;
 			}
+			visited.add(target.id);
+			path.add(target.id);
+			const child = stepAt(target.id, edge);
+			frame.step.next.push(child);
+			stack.push({ step: child, edges: outgoing.get(target.id) ?? [], index: 0 });
 		}
-		path.delete(node);
-		return {
-			kind: 'step',
-			edge: via?.id ?? null,
-			reaction: via?.label ?? '',
-			node,
-			name: doc.nodes[node]?.name ?? '',
-			next,
-		};
+		return top;
 	}
 
 	const start = expand(doc.rootNodeId, null);
@@ -82,17 +95,18 @@ export type PreviewLine = { depth: number; phrase: string; name: string; jump: '
 export function previewLines(outline: Outline, limit: number): { lines: PreviewLine[]; more: number } {
 	const lines: PreviewLine[] = [];
 	let total = 0;
-	function walk(entries: readonly OutlineEntry[], depth: number) {
-		for (const entry of entries) {
-			total += 1;
-			if (lines.length < limit) {
-				const jump = entry.kind === 'jump' ? (entry.back ? 'back' : 'above') : null;
-				lines.push({ depth, phrase: reactionPhrase(entry.reaction), name: entry.name, jump });
-			}
-			if (entry.kind === 'step') walk(entry.next, depth + 1);
+	const stack = outline.start.next.map((entry) => ({ entry, depth: 0 })).reverse();
+	for (let item = stack.pop(); item; item = stack.pop()) {
+		const { entry, depth } = item;
+		total += 1;
+		if (lines.length < limit) {
+			const jump = entry.kind === 'jump' ? (entry.back ? 'back' : 'above') : null;
+			lines.push({ depth, phrase: reactionPhrase(entry.reaction), name: entry.name, jump });
+		}
+		if (entry.kind === 'step') {
+			for (let i = entry.next.length - 1; i >= 0; i--) stack.push({ entry: entry.next[i]!, depth: depth + 1 });
 		}
 	}
-	walk(outline.start.next, 0);
 	return { lines, more: total - lines.length };
 }
 

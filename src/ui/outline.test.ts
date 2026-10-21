@@ -175,4 +175,12 @@ describe('previewLines', () => {
 		expect(preview.lines.map((line) => line.name)).toEqual(['B', 'C']);
 		expect(preview.more).toBe(1);
 	});
+
+	it('handles a chain longer than the call stack', () => {
+		const names = Array.from({ length: 20000 }, (_, i) => `n${i}`);
+		const doc = graph(names, names.slice(1).map((name, i): [string, string] => [names[i]!, name]));
+		const preview = previewLines(toOutline(doc), 3);
+		expect(preview.lines.map((line) => line.depth)).toEqual([0, 1, 2]);
+		expect(preview.more).toBe(19996);
+	});
 });
