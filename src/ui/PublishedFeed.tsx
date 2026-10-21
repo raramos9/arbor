@@ -3,6 +3,8 @@ import type { PublishedSummary, SummaryCursor, UserId } from '../model/publishin
 import { listPublished } from '../publishing';
 import { toOutline, previewLines } from './outline';
 import { groupByStart } from './feedGroups';
+import { miniTree, plural, timeAgo } from './miniTree';
+import { MiniTreeView } from './MiniTreeView';
 import { profileHref, publishedHref } from '../route';
 import { cloud } from '../supabase';
 
@@ -13,6 +15,8 @@ type FeedState =
 
 export function PublishedFeed({ owner }: { owner?: UserId }) {
 	const [state, setState] = useState<FeedState>({ kind: 'loading' });
+	const [attempt, setAttempt] = useState(0);
+	const [shown, setShown] = useState<string | null>(null);
 	const headingId = useId();
 
 	useEffect(() => {
@@ -34,7 +38,7 @@ export function PublishedFeed({ owner }: { owner?: UserId }) {
 		return () => {
 			stale = true;
 		};
-	}, [owner]);
+	}, [owner, attempt]);
 
 	async function loadMore(before: SummaryCursor) {
 		if (!cloud) return;
@@ -50,21 +54,71 @@ export function PublishedFeed({ owner }: { owner?: UserId }) {
 
 	switch (state.kind) {
 		case 'loading':
-			return <p className="muted">Loading…</p>;
+			return (
+				<div className="card-grid" aria-busy="true">
+					<p className="visually-hidden">Loading…</p>
+					{[0, 1, 2].map((index) => (
+						<div key={index} className="card skeleton" aria-hidden="true">
+							<div className="thumb" />
+							<div className="card-body">
+								<span className="bar" />
+								<span className="bar short" />
+							</div>
+						</div>
+					))}
+				</div>
+			);
 		case 'error':
-			return <p className="error">Could not load published strategies.</p>;
+			return (
+				<div className="banner">
+					<p className="error">Could not load published strategies.</p>
+					<div className="row">
+						<button type="button" onClick={() => setAttempt((n) => n + 1)}>
+							Try again
+						</button>
+					</div>
+				</div>
+			);
 		case 'ready': {
 			const { next } = state;
+			const groups = groupByStart(state.items);
+			const visible = groups.filter((group) => shown === null || group.key === shown);
+			if (state.items.length === 0) {
+				return (
+					<div className="first-plan">
+						<h2>Nothing published yet</h2>
+						<p className="muted">Publish a strategy from the editor and it shows up here, next to other plans from the same position.</p>
+					</div>
+				);
+			}
 			return (
 				<>
-					{state.items.length === 0 && <p className="muted">Nothing published yet.</p>}
-					<div className="feed-groups">
-						{groupByStart(state.items).map((group, index) => (
-							<section key={group.key} className="feed-group" aria-labelledby={`${headingId}-${index}`}>
-								<h2 id={`${headingId}-${index}`} className="feed-group-head">
-									{group.heading}
-								</h2>
-								<ul className="strategy-list">
+					{groups.length > 1 && (
+						<div className="chips filter" role="group" aria-label="Starting position">
+							<button type="button" className="chip" aria-pressed={shown === null} onClick={() => setShown(null)}>
+								All <span className="count">{state.items.length}</span>
+							</button>
+							{groups.map((group) => (
+								<button
+									key={group.key}
+									type="button"
+									className="chip"
+									aria-pressed={shown === group.key}
+									onClick={() => setShown(shown === group.key ? null : group.key)}
+								>
+									{group.heading} <span className="count">{group.items.length}</span>
+								</button>
+							))}
+						</div>
+					)}
+					<div className="shelves">
+						{visible.map((group) => (
+							<section key={group.key} className="shelf" aria-labelledby={`${headingId}-${groups.indexOf(group)}`}>
+								<div className="shelf-head">
+									<h2 id={`${headingId}-${groups.indexOf(group)}`}>{group.heading}</h2>
+									<span className="muted">{plural(group.items.length, 'approach', 'approaches')}</span>
+								</div>
+								<ul className="card-grid">
 									{group.items.map((item) => (
 										<FeedCard key={item.id} item={item} showHandle={!owner} />
 									))}
@@ -73,9 +127,9 @@ export function PublishedFeed({ owner }: { owner?: UserId }) {
 						))}
 					</div>
 					{next !== null && (
-						<div className="row">
+						<div className="more-row">
 							<button type="button" disabled={state.more === 'loading'} onClick={() => void loadMore(next)}>
-								Show more
+								{state.more === 'loading' ? 'Loading…' : 'Show more'}
 							</button>
 							{state.more === 'error' && <span className="error">Could not load more.</span>}
 						</div>
@@ -95,36 +149,58 @@ function displayName(name: string): string {
 }
 
 function FeedCard({ item, showHandle }: { item: PublishedSummary; showHandle: boolean }) {
-	const { lines, more } = previewLines(toOutline(item.doc), 3);
+	const outline = toOutline(item.doc);
+	const { lines, more } = previewLines(outline, 3);
 	const id = useId();
 	return (
-		<li>
+		<li className="card">
 			<a
 				href={publishedHref(item.id)}
+				className="card-link"
 				aria-labelledby={`${id}-title`}
 				aria-describedby={lines.length > 0 ? `${id}-meta ${id}-preview` : `${id}-meta`}
 			>
-				<strong id={`${id}-title`}>{item.doc.title || 'Untitled'}</strong>
-				<span id={`${id}-meta`} className="muted">
-					{item.doc.ruleset} · {new Date(item.updatedAt).toLocaleDateString()}
-				</span>
-				{lines.length > 0 && (
-					<ol id={`${id}-preview`} className="preview">
-						{lines.map((line, index) => (
-							<li key={index} style={{ paddingLeft: line.depth * 12 }}>
-								<em>{line.phrase}</em>{' '}
-								{line.jump === null
-									? displayName(line.name)
-									: line.jump === 'back'
-										? `back to ${displayName(line.name)}`
-										: `${displayName(line.name)}, continued above`}
-							</li>
-						))}
-						{more > 0 && <li className="preview-more">+{more} more</li>}
-					</ol>
-				)}
+				<MiniTreeView tree={miniTree(outline)} ruleset={item.doc.ruleset} />
+				<div className="card-body">
+					<h3 id={`${id}-title`} className="card-title">
+						{item.doc.title || 'Untitled'}
+					</h3>
+					{lines.length > 0 && (
+						<ol id={`${id}-preview`} className="preview">
+							{lines.map((line, index) => (
+								<li key={index} style={{ paddingLeft: line.depth * 10 }}>
+									{'options' in line ? (
+										<>
+											<em>{line.phrase}</em> <span className="preview-options">{line.options} options</span>
+										</>
+									) : (
+										<>
+											{line.phrase && <em>{line.phrase} </em>}
+											{line.jump === null
+												? displayName(line.name)
+												: line.jump === 'back'
+													? `back to ${displayName(line.name)}`
+													: `${displayName(line.name)}, continued above`}
+										</>
+									)}
+								</li>
+							))}
+							{more > 0 && <li className="preview-more">+{more} more</li>}
+						</ol>
+					)}
+				</div>
 			</a>
-			{showHandle && <a className="handle-link" href={profileHref(item.handle)}>@{item.handle}</a>}
+			<div className="card-foot">
+				{showHandle && (
+					<a className="handle-link" href={profileHref(item.handle)}>
+						@{item.handle}
+					</a>
+				)}
+				<span id={`${id}-meta`}>
+					<span className="visually-hidden">{item.doc.ruleset}, updated </span>
+					{timeAgo(item.updatedAt)}
+				</span>
+			</div>
 		</li>
 	);
 }
