@@ -24,10 +24,10 @@ export function PositionField({ value, onChange, allowNone }: Props) {
 		input.current?.focus();
 	});
 
-	// Undo can move the doc to a named position while Other is still chosen here; the doc wins.
+	// Undo can move the doc to a listed position while Other is still chosen here; the doc wins.
 	if (value !== seenValue) {
 		setSeenValue(value);
-		if (value !== null) setOtherChosen(false);
+		if (value?.kind === 'listed') setOtherChosen(false);
 	}
 
 	const isOther = otherChosen || value?.kind === 'other';
@@ -48,6 +48,7 @@ export function PositionField({ value, onChange, allowNone }: Props) {
 	}
 
 	function onText(next: string) {
+		setOtherChosen(true);
 		setDraft(next);
 		const name = next.trim();
 		onChange(name === '' ? null : { kind: 'other', name });
