@@ -3,6 +3,7 @@ import { armDragDoc } from '../model/fixtures';
 import { EdgeIdSchema, NodeIdSchema, type StrategyDoc } from '../model/strategy';
 import {
 	entrySelection,
+	reactionSelection,
 	groupSameReaction,
 	isLit,
 	toOutline,
@@ -137,6 +138,10 @@ describe('isLit', () => {
 		expect(isLit(jump, { type: 'edge', id: EdgeIdSchema.parse('e1') })).toBe(true);
 		expect(isLit(jump, { type: 'node', id: NodeIdSchema.parse('a') })).toBe(false);
 	});
+	it('lights the leader row for a reaction selection', () => {
+		expect(isLit(jump, { type: 'reaction', id: EdgeIdSchema.parse('e1') })).toBe(true);
+		expect(isLit(jump, { type: 'reaction', id: EdgeIdSchema.parse('e0') })).toBe(false);
+	});
 	it('never lights the first row of a line by an edge', () => {
 		expect(isLit(start, { type: 'node', id: NodeIdSchema.parse('a') })).toBe(true);
 		expect(isLit(start, { type: 'edge', id: EdgeIdSchema.parse('e0') })).toBe(false);
@@ -149,6 +154,14 @@ describe('entrySelection', () => {
 		const step = start.next[0] as OutlineStep;
 		expect(entrySelection(step)).toEqual({ type: 'node', id: 'b' });
 		expect(entrySelection(step.next[0]!)).toEqual({ type: 'edge', id: 'e1' });
+	});
+});
+
+describe('reactionSelection', () => {
+	it('selects the reaction by the leader outcome edge', () => {
+		const { start } = toOutline(graph(['a', 'b'], [['a', 'b']]));
+		expect(reactionSelection(start.next[0]!)).toEqual({ type: 'reaction', id: 'e0' });
+		expect(reactionSelection(start)).toBeNull();
 	});
 });
 

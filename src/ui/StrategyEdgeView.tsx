@@ -6,6 +6,8 @@ import { InlineEditContext, InlineInput } from './InlineEdit';
 import { PlayIcon } from './PlayIcon';
 
 export const SelectEdgeContext = createContext<(id: string) => void>(() => {});
+// The pill stands for the whole reaction, so it selects every outcome rather than one.
+export const SelectReactionContext = createContext<(id: string) => void>(() => {});
 
 const EDGE_COLOR = '#a1a1aa';
 const EDGE_COLOR_SELECTED = '#4f46e5';
@@ -23,7 +25,7 @@ export function StrategyEdgeView({
 	selected,
 	data,
 }: EdgeProps<StrategyFlowEdge>) {
-	const selectEdge = useContext(SelectEdgeContext);
+	const selectReaction = useContext(SelectReactionContext);
 	const { start } = useContext(InlineEditContext);
 	const fork = data?.fork ?? null;
 	const forkAt = useStore(useCallback((state: ReactFlowState) => forkKey(state, fork), [fork]));
@@ -51,6 +53,7 @@ export function StrategyEdgeView({
 	const words = data?.label ?? '';
 	const label = fork && !fork.leader ? '' : words;
 	const hasMedia = (data?.mediaCount ?? 0) > 0;
+	const pillSelected = fork ? fork.selected : selected;
 	const editing = data?.editing ?? false;
 	const position = { transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` };
 	return (
@@ -84,10 +87,11 @@ export function StrategyEdgeView({
 					<button
 						type="button"
 						tabIndex={-1}
-						className={`edge-pill nodrag nopan${selected ? ' selected' : ''}`}
+						className={`edge-pill nodrag nopan${pillSelected ? ' selected' : ''}`}
 						style={position}
 						title={label || undefined}
-						onClick={() => selectEdge(id)}
+						aria-label={fork ? `Reaction: ${label}, ${fork.targets.length} outcomes` : undefined}
+						onClick={() => selectReaction(id)}
 						onDoubleClick={() => start({ type: 'edge', id: EdgeIdSchema.parse(id) })}
 					>
 						{label !== '' && <span className="edge-pill-text">{label}</span>}

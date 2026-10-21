@@ -21,20 +21,22 @@ type Props = {
 	doc: StrategyDoc;
 	selection: Selection;
 	error: string | null;
+	onSelect: (next: Selection) => void;
 	access: InspectorAccess;
 };
 
-export function Inspector({ doc, selection, error, access }: Props) {
+export function Inspector({ doc, selection, error, onSelect, access }: Props) {
 	const node = selection?.type === 'node' ? doc.nodes[selection.id] : undefined;
 	const edge = selection?.type === 'edge' ? doc.edges[selection.id] : undefined;
+	const reaction = selection?.type === 'reaction' && doc.edges[selection.id] ? selection.id : undefined;
 
 	switch (access.mode) {
 		case 'edit':
 			return (
-				<EditInspector doc={doc} node={node} edge={edge} error={error} {...access} />
+				<EditInspector doc={doc} node={node} edge={edge} reaction={reaction} error={error} onSelect={onSelect} {...access} />
 			);
 		case 'view':
-			return <ViewInspector doc={doc} node={node} edge={edge} />;
+			return <ViewInspector doc={doc} node={node} edge={edge} reaction={reaction} onSelect={onSelect} />;
 		default: {
 			const unreachable: never = access;
 			return unreachable;
@@ -46,13 +48,31 @@ type Target = {
 	doc: StrategyDoc;
 	node: StrategyDoc['nodes'][string] | undefined;
 	edge: StrategyDoc['edges'][string] | undefined;
+	reaction: EdgeId | undefined;
+	onSelect: (next: Selection) => void;
 };
+
+// Every outcome of the reaction, each a way to select that one connection.
+function OutcomeList({ doc, leader, onSelect }: { doc: StrategyDoc; leader: EdgeId; onSelect: (next: Selection) => void }) {
+	return (
+		<div className="outcomes">
+			<p className="muted">Outcomes</p>
+			<ul>
+				{reactionGroup(doc, leader).map((id) => (
+					<li key={id}>
+						<button onClick={() => onSelect({ type: 'edge', id })}>{doc.nodes[doc.edges[id]!.to]?.name || 'Untitled'}</button>
+					</li>
+				))}
+			</ul>
+		</div>
+	);
+}
 
 function connectionName(doc: StrategyDoc, edge: NonNullable<Target['edge']>): string {
 	return `${doc.nodes[edge.from]?.name || 'Untitled'} to ${doc.nodes[edge.to]?.name || 'Untitled'}`;
 }
 
-function ViewInspector({ doc, node, edge }: Target) {
+function ViewInspector({ doc, node, edge, reaction, onSelect }: Target) {
 	return (
 		<aside className="inspector">
 			{node && (
@@ -73,7 +93,14 @@ function ViewInspector({ doc, node, edge }: Target) {
 					<MediaList media={edge.media} access={{ mode: 'view' }} />
 				</div>
 			)}
-			{!node && !edge && (
+			{reaction && (
+				<div className="form" key={`reaction:${reaction}`}>
+					<h2>Reaction</h2>
+					<ReadField label="Reaction" value={doc.edges[reaction]?.label ?? ''} />
+					<OutcomeList doc={doc} leader={reaction} onSelect={onSelect} />
+				</div>
+			)}
+			{!node && !edge && !reaction && (
 				<div className="form">
 					<h2>Strategy</h2>
 					<ReadField label="Title" value={doc.title || 'Untitled'} />
@@ -95,7 +122,7 @@ type EditProps = Target & {
 	onAddOption: (edge: EdgeId) => void;
 };
 
-function EditInspector({ doc, node, edge, error, exec, onDeleted, onAddReaction, onAddOption }: EditProps) {
+function EditInspector({ doc, node, edge, reaction, onSelect, error, exec, onDeleted, onAddReaction, onAddOption }: EditProps) {
 	function remove(cmd: Command) {
 		if (exec(cmd).ok) onDeleted();
 	}
@@ -154,7 +181,23 @@ function EditInspector({ doc, node, edge, error, exec, onDeleted, onAddReaction,
 					</button>
 				</div>
 			)}
-			{!node && !edge && (
+			{reaction && (
+				<div className="form" key={`reaction:${reaction}`}>
+					<h2>Reaction</h2>
+					<ReactionField doc={doc} edge={reaction} exec={exec} />
+					<OutcomeList doc={doc} leader={reaction} onSelect={onSelect} />
+					{doc.edges[reaction]?.label !== '' && (
+						<button onClick={() => onAddOption(reaction)}>+ Option for “{doc.edges[reaction]?.label}”</button>
+					)}
+					<button
+						className="danger"
+						onClick={() => remove({ type: 'deleteEdges', ids: reactionGroup(doc, reaction) })}
+					>
+						Delete reaction
+					</button>
+				</div>
+			)}
+			{!node && !edge && !reaction && (
 				<div className="form">
 					<h2>Strategy</h2>
 					<Field

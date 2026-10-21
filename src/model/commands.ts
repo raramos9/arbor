@@ -38,6 +38,7 @@ export type Command =
 	  }
 	| { type: 'relabelEdges'; ids: EdgeId[]; label: string }
 	| { type: 'deleteEdge'; id: EdgeId }
+	| { type: 'deleteEdges'; ids: EdgeId[] }
 	| { type: 'moveNode'; id: NodeId; at: { x: number; y: number } }
 	| { type: 'setRoot'; id: NodeId }
 	| { type: 'addMedia'; owner: MediaOwner; media: Media }
@@ -175,6 +176,12 @@ export function apply(doc: StrategyDoc, cmd: Command): ApplyResult {
 		case 'deleteEdge': {
 			if (!doc.edges[cmd.id]) return refuse('That edge does not exist.');
 			return { ok: true, doc: stamp({ ...doc, edges: omit(doc.edges, cmd.id) }) };
+		}
+		case 'deleteEdges': {
+			if (cmd.ids.length === 0 || cmd.ids.some((id) => !doc.edges[id])) return refuse('That edge does not exist.');
+			const edges = { ...doc.edges };
+			for (const id of cmd.ids) delete edges[id];
+			return { ok: true, doc: stamp({ ...doc, edges }) };
 		}
 		case 'moveNode': {
 			if (!doc.nodes[cmd.id]) return refuse('That node does not exist.');

@@ -130,12 +130,17 @@ export function previewLines(outline: Outline, limit: number): { lines: PreviewL
 
 export function isLit(entry: OutlineEntry, selection: Selection): boolean {
 	if (!selection) return false;
-	if (selection.type === 'edge') return entry.edge === selection.id;
+	if (selection.type === 'edge' || selection.type === 'reaction') return entry.edge === selection.id;
 	return entry.kind === 'step' && entry.node === selection.id;
 }
 
 export function entrySelection(entry: OutlineEntry): Selection {
 	return entry.kind === 'jump' ? { type: 'edge', id: entry.edge } : { type: 'node', id: entry.node };
+}
+
+// The row that heads a group of same-reaction outcomes selects the reaction through its first outcome.
+export function reactionSelection(leader: OutlineEntry): Selection {
+	return leader.edge ? { type: 'reaction', id: leader.edge } : null;
 }
 
 export type OutlineRow = { kind: 'entry'; entry: OutlineEntry } | { kind: 'group'; phrase: string; entries: OutlineEntry[] };

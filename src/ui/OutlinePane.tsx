@@ -15,6 +15,7 @@ type Props = {
 	doc: StrategyDoc;
 	selection: Selection;
 	onSelectEntry: (entry: OutlineEntry) => void;
+	onSelectReaction: (leader: OutlineEntry) => void;
 };
 
 function Chevron({ direction }: { direction: 'left' | 'right' | 'down' }) {
@@ -41,7 +42,7 @@ function ancestorsOf(step: OutlineStep, isTarget: (entry: OutlineEntry) => boole
 	return null;
 }
 
-export function OutlinePane({ doc, selection, onSelectEntry }: Props) {
+export function OutlinePane({ doc, selection, onSelectEntry, onSelectReaction }: Props) {
 	const [hidden, setHidden] = useState(false);
 	const [collapsed, setCollapsed] = useState<ReadonlySet<NodeId>>(new Set());
 	const [seenSelection, setSeenSelection] = useState(selection);
@@ -94,10 +95,10 @@ export function OutlinePane({ doc, selection, onSelectEntry }: Props) {
 	function renderRows(entries: readonly OutlineEntry[]) {
 		return groupSameReaction(entries).map((row) => {
 			if (row.kind === 'entry') return renderEntry(row.entry);
-			// The reaction row stands for the shared pill on the canvas, which selects the first outcome's connection.
+			// The reaction row stands for the shared pill on the canvas, so it selects the whole reaction.
 			const first = row.entries[0]!;
 			const leader = first.edge;
-			const lit = selection?.type === 'edge' && row.entries.some((entry) => entry.edge === selection.id);
+			const lit = (selection?.type === 'edge' || selection?.type === 'reaction') && row.entries.some((entry) => entry.edge === selection.id);
 			return (
 				<li key={`group:${leader}`}>
 					<div className={`line${lit ? ' lit' : ''}`}>
@@ -105,10 +106,7 @@ export function OutlinePane({ doc, selection, onSelectEntry }: Props) {
 						<button
 							className="line-row"
 							aria-current={lit ? 'true' : undefined}
-							onClick={() => {
-								// A jump is the outline's way of selecting a connection rather than a node.
-								if (leader) onSelectEntry({ kind: 'jump', edge: leader, reaction: first.reaction, node: first.node, name: first.name, back: false });
-							}}
+							onClick={() => onSelectReaction(first)}
 						>
 							<span className="line-text">
 								<em>{row.phrase}</em>
@@ -122,8 +120,8 @@ export function OutlinePane({ doc, selection, onSelectEntry }: Props) {
 	}
 
 	function renderEntry(entry: OutlineEntry, label?: string, grouped = false) {
-		// Inside a group, selecting a connection lights the reaction row above instead.
-		const lit = grouped && selection?.type === 'edge' ? false : isLit(entry, selection);
+		// Inside a group, selecting a connection or the reaction lights the reaction row above instead.
+		const lit = grouped && (selection?.type === 'edge' || selection?.type === 'reaction') ? false : isLit(entry, selection);
 		const phrase = grouped || (entry.kind === 'step' && entry.edge === null) ? null : reactionPhrase(entry.reaction);
 		const isCollapsed = entry.kind === 'step' && collapsed.has(entry.node);
 		const hasChildren = entry.kind === 'step' && entry.next.length > 0;

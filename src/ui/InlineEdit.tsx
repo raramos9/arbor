@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, type KeyboardEv
 import type { NodeId } from '../model/strategy';
 import type { Selection } from './flow';
 
-export type EditTarget = NonNullable<Selection>;
+export type EditTarget = Exclude<NonNullable<Selection>, { type: 'reaction' }>;
 
 export type InlineEdit = {
 	start: (target: EditTarget) => void;

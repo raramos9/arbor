@@ -185,6 +185,18 @@ describe('deleteEdge', () => {
 	});
 });
 
+describe('deleteEdges', () => {
+	it('removes every listed edge and keeps the nodes', () => {
+		const doc = ok(armDragDoc(), { type: 'deleteEdges', ids: [eid('e1'), eid('e3')] });
+		expect(Object.keys(doc.edges)).toEqual(['e2']);
+		expect(Object.keys(doc.nodes)).toHaveLength(4);
+	});
+	it('refuses an empty list or an unknown edge without changing anything', () => {
+		refused(armDragDoc(), { type: 'deleteEdges', ids: [] });
+		refused(armDragDoc(), { type: 'deleteEdges', ids: [eid('e1'), eid('ghost')] });
+	});
+});
+
 describe('moveNode', () => {
 	it('writes layout', () => {
 		const doc = ok(armDragDoc(), { type: 'moveNode', id: nid('triangle'), at: { x: 10, y: 20 } });
