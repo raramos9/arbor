@@ -91,7 +91,11 @@ export function StrategyEdgeView({
 						style={position}
 						title={label || undefined}
 						aria-label={fork ? `Reaction: ${label}, ${fork.targets.length} outcomes` : undefined}
-						onClick={() => selectReaction(id)}
+						onClick={(e) => {
+							// The pill is portaled but still bubbles to React Flow's edge click, which would select this one outcome.
+							e.stopPropagation();
+							selectReaction(id);
+						}}
 						onDoubleClick={() => start({ type: 'edge', id: EdgeIdSchema.parse(id) })}
 					>
 						{label !== '' && <span className="edge-pill-text">{label}</span>}
