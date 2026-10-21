@@ -30,8 +30,17 @@ export function InlineInput({ target, initial, className, label, placeholder, ta
 	const settled = useRef(false);
 
 	useEffect(() => {
-		ref.current?.focus();
-		ref.current?.select();
+		let frame = 0;
+		const focus = () => {
+			const input = ref.current;
+			if (!input) return;
+			input.focus();
+			input.select();
+			// React Flow hides a new node until it is measured, and a hidden input can't take focus.
+			if (document.activeElement !== input) frame = requestAnimationFrame(focus);
+		};
+		focus();
+		return () => cancelAnimationFrame(frame);
 	}, []);
 
 	// Enter, Tab and the blur that follows unmounting must not each commit.
