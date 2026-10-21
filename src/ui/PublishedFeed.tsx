@@ -96,15 +96,20 @@ function displayName(name: string): string {
 
 function FeedCard({ item, showHandle }: { item: PublishedSummary; showHandle: boolean }) {
 	const { lines, more } = previewLines(toOutline(item.doc), 3);
+	const id = useId();
 	return (
 		<li>
-			<a href={publishedHref(item.id)}>
-				<strong>{item.doc.title || 'Untitled'}</strong>
-				<span className="muted">
+			<a
+				href={publishedHref(item.id)}
+				aria-labelledby={`${id}-title`}
+				aria-describedby={lines.length > 0 ? `${id}-meta ${id}-preview` : `${id}-meta`}
+			>
+				<strong id={`${id}-title`}>{item.doc.title || 'Untitled'}</strong>
+				<span id={`${id}-meta`} className="muted">
 					{item.doc.ruleset} · {new Date(item.updatedAt).toLocaleDateString()}
 				</span>
 				{lines.length > 0 && (
-					<ol className="preview">
+					<ol id={`${id}-preview`} className="preview">
 						{lines.map((line, index) => (
 							<li key={index} style={{ paddingLeft: line.depth * 12 }}>
 								<em>{line.phrase}</em>{' '}
