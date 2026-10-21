@@ -5,7 +5,7 @@ import { editorHref, navigate, useRoute } from './route';
 import { clearPendingPublish, peekPendingPublish } from './ui/pendingPublish';
 import { ExploreScreen } from './ui/ExploreScreen';
 import { ProfileScreen } from './ui/ProfileScreen';
-import { ListScreen } from './ui/ListScreen';
+import { HomeRoute } from './ui/HomeRoute';
 import { EditorScreen } from './ui/EditorScreen';
 import { ViewerScreen } from './ui/ViewerScreen';
 
@@ -40,7 +40,7 @@ export function App() {
 		case 'profile':
 			return <ProfileScreen key={route.handle} handle={route.handle} />;
 		case 'list':
-			return <ListScreen />;
+			return <HomeRoute />;
 		default: {
 			const unreachable: never = route;
 			return unreachable;

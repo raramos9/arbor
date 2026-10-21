@@ -138,7 +138,7 @@ export function createStrategy(args: {
 	title: string;
 	ruleset: Ruleset;
 	startingSide: Side;
-	position: Position;
+	position: Position | null;
 }): StrategyDoc {
 	const rootId = newNodeId();
 	const now = new Date().toISOString();
@@ -153,7 +153,7 @@ export function createStrategy(args: {
 		nodes: {
 			[rootId]: {
 				id: rootId,
-				name: positionName(args.position),
+				name: args.position ? positionName(args.position) : 'Start',
 				notes: '',
 				media: [],
 			},
