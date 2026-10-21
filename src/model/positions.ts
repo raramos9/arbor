@@ -47,3 +47,9 @@ export function startLabel(position: Position, side: Side): string {
 	if (canonical.kind === 'listed' && canonical.id === 'standing' && side === 'standing') return 'Standing';
 	return `${positionName(canonical)} · ${side}`;
 }
+
+// Standing is the only position where the standing side makes sense, and the only one it must pair with.
+export function sideAfterPositionChange(side: Side, choice: PositionId | 'other'): Side {
+	if (choice === 'standing') return 'standing';
+	return side === 'standing' ? 'bottom' : side;
+}
