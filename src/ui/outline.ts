@@ -77,6 +77,25 @@ export function reactionPhrase(typed: string): string {
 	return `if ${reaction}`;
 }
 
+export type PreviewLine = { depth: number; phrase: string; name: string; jump: 'back' | 'above' | null };
+
+export function previewLines(outline: Outline, limit: number): { lines: PreviewLine[]; more: number } {
+	const lines: PreviewLine[] = [];
+	let total = 0;
+	function walk(entries: readonly OutlineEntry[], depth: number) {
+		for (const entry of entries) {
+			total += 1;
+			if (lines.length < limit) {
+				const jump = entry.kind === 'jump' ? (entry.back ? 'back' : 'above') : null;
+				lines.push({ depth, phrase: reactionPhrase(entry.reaction), name: entry.name, jump });
+			}
+			if (entry.kind === 'step') walk(entry.next, depth + 1);
+		}
+	}
+	walk(outline.start.next, 0);
+	return { lines, more: total - lines.length };
+}
+
 export function isLit(entry: OutlineEntry, selection: Selection): boolean {
 	if (!selection) return false;
 	if (selection.type === 'edge') return entry.edge === selection.id;

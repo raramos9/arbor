@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { armDragDoc } from '../model/fixtures';
 import { EdgeIdSchema, NodeIdSchema, type StrategyDoc } from '../model/strategy';
-import { entrySelection, isLit, toOutline, reactionPhrase, type OutlineEntry, type OutlineStep } from './outline';
+import { entrySelection, isLit, toOutline, reactionPhrase, previewLines, type OutlineEntry, type OutlineStep } from './outline';
 
 function graph(nodeNames: string[], links: [string, string, string?][], root = nodeNames[0]!): StrategyDoc {
 	const doc = armDragDoc();
@@ -140,5 +140,39 @@ describe('entrySelection', () => {
 		const step = start.next[0] as OutlineStep;
 		expect(entrySelection(step)).toEqual({ type: 'node', id: 'b' });
 		expect(entrySelection(step.next[0]!)).toEqual({ type: 'edge', id: 'e1' });
+	});
+});
+
+describe('previewLines', () => {
+	it('lists a start-only doc as empty', () => {
+		expect(previewLines(toOutline(graph(['a'], [])), 3)).toEqual({ lines: [], more: 0 });
+	});
+
+	it('walks depth first in outline order with depth and phrase', () => {
+		const doc = graph(['a', 'b', 'c', 'd'], [['a', 'b', 'he stacks'], ['b', 'c'], ['a', 'd', 'if he posts']]);
+		expect(previewLines(toOutline(doc), 10)).toEqual({
+			lines: [
+				{ depth: 0, phrase: 'if he stacks', name: 'B', jump: null },
+				{ depth: 1, phrase: 'then', name: 'C', jump: null },
+				{ depth: 0, phrase: 'if he posts', name: 'D', jump: null },
+			],
+			more: 0,
+		});
+	});
+
+	it('marks jumps back or above', () => {
+		const doc = graph(['a', 'b', 'c'], [['a', 'b'], ['a', 'c'], ['b', 'a'], ['c', 'b']]);
+		const { lines } = previewLines(toOutline(doc), 10);
+		expect(lines.filter((line) => line.jump).map((line) => [line.name, line.jump])).toEqual([
+			['A', 'back'],
+			['B', 'above'],
+		]);
+	});
+
+	it('counts rows beyond the limit and ignores unlinked nodes', () => {
+		const doc = graph(['a', 'b', 'c', 'd', 'x'], [['a', 'b'], ['b', 'c'], ['c', 'd']]);
+		const preview = previewLines(toOutline(doc), 2);
+		expect(preview.lines.map((line) => line.name)).toEqual(['B', 'C']);
+		expect(preview.more).toBe(1);
 	});
 });
