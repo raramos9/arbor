@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { PublishedSummary, SummaryCursor, UserId } from '../model/publishing';
 import { listPublished } from '../publishing';
 import { toOutline, previewLines } from './outline';
@@ -13,6 +13,7 @@ type FeedState =
 
 export function PublishedFeed({ owner }: { owner?: UserId }) {
 	const [state, setState] = useState<FeedState>({ kind: 'loading' });
+	const headingId = useId();
 
 	useEffect(() => {
 		let stale = false;
@@ -58,9 +59,9 @@ export function PublishedFeed({ owner }: { owner?: UserId }) {
 				<>
 					{state.items.length === 0 && <p className="muted">Nothing published yet.</p>}
 					<div className="feed-groups">
-						{groupByStart(state.items).map((group) => (
-							<section key={group.key} className="feed-group" aria-labelledby={`feed-group-${group.key}`}>
-								<h2 id={`feed-group-${group.key}`} className="feed-group-head">
+						{groupByStart(state.items).map((group, index) => (
+							<section key={group.key} className="feed-group" aria-labelledby={`${headingId}-${index}`}>
+								<h2 id={`${headingId}-${index}`} className="feed-group-head">
 									{group.heading}
 								</h2>
 								<ul className="strategy-list">
