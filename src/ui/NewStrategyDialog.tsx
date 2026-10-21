@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { POSITIONS, positionName, sideAfterPositionChange, type Position, type PositionId } from '../model/positions';
+import { canonicalPosition, POSITIONS, positionName, sideAfterPositionChange, type Position, type PositionId } from '../model/positions';
 import { createStrategy, RulesetSchema, SideSchema, type Ruleset, type Side } from '../model/strategy';
 import { editorHref, navigate } from '../route';
 import { saveStrategy } from '../storage';
@@ -22,8 +22,11 @@ export function NewStrategyDialog({ initial, onClose }: { initial: PositionId; o
 		choice === OTHER
 			? otherName.trim() === ''
 				? null
-				: { kind: 'other', name: otherName.trim() }
+				: canonicalPosition({ kind: 'other', name: otherName.trim() })
 			: { kind: 'listed', id: choice };
+	// A typed name matching a listed position follows that position's side rule.
+	const effective = position?.kind === 'listed' ? position.id : choice;
+	const startSide = sideAfterPositionChange(side, effective);
 	// Until the user types a title, it follows the chosen position so Create is ready once one is picked.
 	const suggestedTitle = position ? `${positionName(position)} game plan` : '';
 	const title = typedTitle ?? suggestedTitle;
@@ -37,7 +40,7 @@ export function NewStrategyDialog({ initial, onClose }: { initial: PositionId; o
 	function onSubmit(e: FormEvent) {
 		e.preventDefault();
 		if (!valid || !position) return;
-		const doc = createStrategy({ title: title.trim(), position, ruleset, startingSide: side });
+		const doc = createStrategy({ title: title.trim(), position, ruleset, startingSide: startSide });
 		const saved = saveStrategy(doc);
 		if (!saved.ok) {
 			setError(saved.error);
@@ -101,14 +104,14 @@ export function NewStrategyDialog({ initial, onClose }: { initial: PositionId; o
 						<legend>You start</legend>
 						<div className="segmented">
 							{SideSchema.options
-								.filter((option) => option !== 'standing' || choice === 'standing')
+								.filter((option) => (effective === 'standing') === (option === 'standing'))
 								.map((option) => (
 									<label key={option}>
 										<input
 											type="radio"
 											name="side"
 											value={option}
-											checked={side === option}
+											checked={startSide === option}
 											onChange={() => setSide(option)}
 										/>
 										<span>{SIDE_LABEL[option]}</span>
@@ -136,7 +139,7 @@ export function NewStrategyDialog({ initial, onClose }: { initial: PositionId; o
 				</div>
 				{error && <p className="error">{error}</p>}
 				<div className="row">
-					{!valid && position === null && <p className="muted hint">Choose where it starts to create it.</p>}
+					{!valid && position === null && <p className="muted hint">Name the position to create it.</p>}
 					<button type="button" onClick={onClose}>
 						Cancel
 					</button>
