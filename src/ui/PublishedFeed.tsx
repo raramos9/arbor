@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { PublishedSummary, SummaryCursor, UserId } from '../model/publishing';
 import { listPublished } from '../publishing';
+import { toOutline, previewLines } from './outline';
+import { groupByStart } from './feedGroups';
 import { profileHref, publishedHref } from '../route';
 import { cloud } from '../supabase';
 
@@ -55,19 +57,20 @@ export function PublishedFeed({ owner }: { owner?: UserId }) {
 			return (
 				<>
 					{state.items.length === 0 && <p className="muted">Nothing published yet.</p>}
-					<ul className="strategy-list">
-						{state.items.map((item) => (
-							<li key={item.id}>
-								<a href={publishedHref(item.id)}>
-									<strong>{item.title || 'Untitled'}</strong>
-									<span className="muted">
-										{item.ruleset} · starts {item.startingSide} · {new Date(item.updatedAt).toLocaleDateString()}
-									</span>
-								</a>
-								{!owner && <a className="handle-link" href={profileHref(item.handle)}>@{item.handle}</a>}
-							</li>
+					<div className="feed-groups">
+						{groupByStart(state.items).map((group) => (
+							<section key={group.key} className="feed-group" aria-labelledby={`feed-group-${group.key}`}>
+								<h2 id={`feed-group-${group.key}`} className="feed-group-head">
+									{group.heading}
+								</h2>
+								<ul className="strategy-list">
+									{group.items.map((item) => (
+										<FeedCard key={item.id} item={item} showHandle={!owner} />
+									))}
+								</ul>
+							</section>
 						))}
-					</ul>
+					</div>
 					{next !== null && (
 						<div className="row">
 							<button type="button" disabled={state.more === 'loading'} onClick={() => void loadMore(next)}>
@@ -84,4 +87,38 @@ export function PublishedFeed({ owner }: { owner?: UserId }) {
 			return unreachable;
 		}
 	}
+}
+
+function displayName(name: string): string {
+	return name || 'Untitled';
+}
+
+function FeedCard({ item, showHandle }: { item: PublishedSummary; showHandle: boolean }) {
+	const { lines, more } = previewLines(toOutline(item.doc), 3);
+	return (
+		<li>
+			<a href={publishedHref(item.id)}>
+				<strong>{item.doc.title || 'Untitled'}</strong>
+				<span className="muted">
+					{item.doc.ruleset} · {new Date(item.updatedAt).toLocaleDateString()}
+				</span>
+				{lines.length > 0 && (
+					<ol className="preview">
+						{lines.map((line, index) => (
+							<li key={index} style={{ paddingLeft: line.depth * 12 }}>
+								<em>{line.phrase}</em>{' '}
+								{line.jump === null
+									? displayName(line.name)
+									: line.jump === 'back'
+										? `back to ${displayName(line.name)}`
+										: `${displayName(line.name)}, continued above`}
+							</li>
+						))}
+						{more > 0 && <li className="preview-more">+{more} more</li>}
+					</ol>
+				)}
+			</a>
+			{showHandle && <a className="handle-link" href={profileHref(item.handle)}>@{item.handle}</a>}
+		</li>
+	);
 }

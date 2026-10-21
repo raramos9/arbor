@@ -2,8 +2,6 @@ import { z } from 'zod';
 import {
 	HandleSchema,
 	PublishedIdSchema,
-	RulesetSchema,
-	SideSchema,
 	newStrategyId,
 	parseStrategy,
 	type Handle,
@@ -11,8 +9,6 @@ import {
 	type Media,
 	type PublishedId,
 	type Result,
-	type Ruleset,
-	type Side,
 	type StrategyDoc,
 } from './strategy';
 
@@ -119,16 +115,14 @@ export function forkPublished(published: PublishedStrategy, now: string): Strate
 	};
 }
 
-export const SUMMARY_COLUMNS = 'id, title, ruleset, starting_side, updated_at, owner:profiles!owner(handle)';
+export const SUMMARY_COLUMNS = 'id, doc, updated_at, owner:profiles!owner(handle)';
 export const PAGE_SIZE = 50;
 
 export type PublishedSummary = {
 	id: PublishedId;
-	title: string;
 	handle: Handle;
-	ruleset: Ruleset;
-	startingSide: Side;
 	updatedAt: string;
+	doc: StrategyDoc;
 };
 
 export type SummaryCursor = { updatedAt: string; id: PublishedId };
@@ -136,9 +130,7 @@ export type SummaryPage = { items: PublishedSummary[]; next: SummaryCursor | nul
 
 const SummaryRowSchema = z.object({
 	id: PublishedIdSchema,
-	title: z.string().nullable(),
-	ruleset: RulesetSchema,
-	starting_side: SideSchema,
+	doc: z.unknown(),
 	updated_at: z.string(),
 	owner: z.object({ handle: HandleSchema }),
 });
@@ -157,14 +149,12 @@ export function toSummaryPage(rows: unknown[]): SummaryPage {
 			continue;
 		}
 		const { data } = parsed;
-		items.push({
-			id: data.id,
-			title: data.title ?? '',
-			handle: data.owner.handle,
-			ruleset: data.ruleset,
-			startingSide: data.starting_side,
-			updatedAt: data.updated_at,
-		});
+		const doc = parseStrategy(data.doc);
+		if (!doc.ok) {
+			console.warn(`Skipping malformed published strategy ${data.id}`);
+			continue;
+		}
+		items.push({ id: data.id, handle: data.owner.handle, updatedAt: data.updated_at, doc: doc.value });
 	}
 	return { items, next };
 }
