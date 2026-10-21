@@ -269,9 +269,7 @@ describe('hasChanges', () => {
 describe('toSummaryPage', () => {
 	const row = (i: number, overrides: Record<string, unknown> = {}) => ({
 		id: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
-		title: `Strategy ${i}`,
-		ruleset: 'gi',
-		starting_side: 'top',
+		doc: { ...armDragInput, title: `Strategy ${i}` },
 		updated_at: `2026-01-01T00:00:${String(59 - (i % 60)).padStart(2, '0')}.000Z`,
 		owner: { handle: 'alice' },
 		...overrides,
@@ -289,20 +287,14 @@ describe('toSummaryPage', () => {
 		const page = toSummaryPage(all);
 		expect(page.items).toHaveLength(PAGE_SIZE);
 		expect(page.next).toEqual({ updatedAt: all[PAGE_SIZE - 1]?.updated_at, id: all[PAGE_SIZE - 1]?.id });
-		expect(page.items[0]).toEqual({
-			id: all[0]?.id,
-			title: 'Strategy 0',
-			handle: 'alice',
-			ruleset: 'gi',
-			startingSide: 'top',
-			updatedAt: all[0]?.updated_at,
-		});
+		expect(page.items[0]).toMatchObject({ id: all[0]?.id, handle: 'alice', updatedAt: all[0]?.updated_at });
+		expect(page.items[0]?.doc.title).toBe('Strategy 0');
 	});
 
 	it('drops a malformed row but still cursors from the raw last row', () => {
 		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 		const all = rows(PAGE_SIZE + 1);
-		all[PAGE_SIZE - 1] = row(PAGE_SIZE - 1, { ruleset: 'nonsense' });
+		all[PAGE_SIZE - 1] = row(PAGE_SIZE - 1, { owner: { handle: 'X' } });
 		const page = toSummaryPage(all);
 		expect(page.items).toHaveLength(PAGE_SIZE - 1);
 		expect(page.next).toEqual({ updatedAt: all[PAGE_SIZE - 1]?.updated_at, id: all[PAGE_SIZE - 1]?.id });
@@ -310,7 +302,11 @@ describe('toSummaryPage', () => {
 		warn.mockRestore();
 	});
 
-	it('turns a null title into an empty string', () => {
-		expect(toSummaryPage([row(1, { title: null })]).items[0]?.title).toBe('');
+	it('skips a row whose doc does not parse and keeps the rest', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const page = toSummaryPage([row(1), row(2, { doc: { nonsense: true } }), row(3)]);
+		expect(page.items.map((item) => item.doc.title)).toEqual(['Strategy 1', 'Strategy 3']);
+		expect(warn).toHaveBeenCalledOnce();
+		warn.mockRestore();
 	});
 });
