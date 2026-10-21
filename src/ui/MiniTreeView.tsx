@@ -1,4 +1,3 @@
-import type { Ruleset } from '../model/strategy';
 import type { MiniTree, TreeDotKind } from './miniTree';
 
 const COLUMN = 40;
@@ -9,10 +8,8 @@ const MIN_HEIGHT = 88;
 
 const RADIUS: Record<TreeDotKind, number> = { start: 5, step: 4, end: 3.5, jump: 3.5, fork: 2.5 };
 
-const RULESET_LABEL: Record<Ruleset, string> = { gi: 'Gi', 'no-gi': 'No-gi', both: 'Gi + no-gi' };
-
 // A small canvas: the strategy's lines drawn with the editor's marks (solid reaction, dashed "then", zinc line end).
-export function MiniTreeView({ tree, ruleset }: { tree: MiniTree; ruleset: Ruleset }) {
+export function MiniTreeView({ tree }: { tree: MiniTree }) {
 	const contentWidth = (tree.columns - 1) * COLUMN;
 	const contentHeight = (tree.rows - 1) * ROW;
 	const width = Math.max(contentWidth + PAD * 2, MIN_WIDTH);
@@ -21,7 +18,7 @@ export function MiniTreeView({ tree, ruleset }: { tree: MiniTree; ruleset: Rules
 	const py = (y: number) => (height - contentHeight) / 2 + y * ROW;
 
 	return (
-		<div className="thumb">
+		<div className={tree.clipped ? 'thumb clipped' : 'thumb'}>
 			<svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false">
 				{tree.links.map((link, index) => {
 					const x1 = px(link.x1);
@@ -39,7 +36,7 @@ export function MiniTreeView({ tree, ruleset }: { tree: MiniTree; ruleset: Rules
 					<circle key={index} className={`mt-${dot.kind}`} cx={px(dot.x)} cy={py(dot.y)} r={RADIUS[dot.kind]} />
 				))}
 			</svg>
-			<span className="thumb-chip">{RULESET_LABEL[ruleset]}</span>
+			{tree.clipped && tree.hidden > 0 && <span className="thumb-more">+{tree.hidden}</span>}
 		</div>
 	);
 }
