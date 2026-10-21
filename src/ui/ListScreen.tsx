@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useId, useRef, useState, type ChangeEvent } from 'react';
 import { deleteClip, listClipIds } from '../clips';
 import { importStrategy, readArborFile } from '../exchange';
 import { planImport, type ArborFile } from '../model/exchange';
@@ -9,7 +9,8 @@ import { editorHref, navigate } from '../route';
 import { hasStrategy, listStrategies, loadStrategy } from '../storage';
 import { AppHeader } from './AppHeader';
 import { ImportIcon, PlusIcon } from './Icons';
-import { miniTree, plural, strategyStats, timeAgo } from './miniTree';
+import { CardPreview } from './CardPreview';
+import { miniTree, plural, RULESET_LABEL, strategyStats, timeAgo } from './miniTree';
 import { MiniTreeView } from './MiniTreeView';
 import { NewStrategyDialog } from './NewStrategyDialog';
 import { toOutline } from './outline';
@@ -170,16 +171,20 @@ export function ListScreen() {
 
 function StrategyCard({ doc }: { doc: StrategyDoc }) {
 	const stats = strategyStats(doc);
+	const outline = toOutline(doc);
+	const previewId = useId();
 	return (
 		<li className="card">
 			<a href={editorHref(doc.id)} className="card-link">
-				<MiniTreeView tree={miniTree(toOutline(doc))} ruleset={doc.ruleset} />
+				<MiniTreeView tree={miniTree(outline)} />
 				<div className="card-body">
 					<h2 className="card-title">{doc.title || 'Untitled'}</h2>
 					<p className="card-start">
 						{doc.position ? startLabel(doc.position, doc.startingSide) : `Starts ${doc.startingSide}`}
+						{` · ${RULESET_LABEL[doc.ruleset]}`}
 						{doc.origin && ` · fork of @${doc.origin.handle}`}
 					</p>
+					<CardPreview id={previewId} outline={outline} />
 					<p className="card-meta">
 						<span>
 							{plural(stats.steps, 'step')} · {plural(stats.reactions, 'reaction')}
