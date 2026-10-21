@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { ApplyResult, Command } from '../model/commands';
 import { positionName } from '../model/positions';
 import { reactionGroup, RulesetSchema, SideSchema, type EdgeId, type StrategyDoc } from '../model/strategy';
@@ -53,12 +53,12 @@ type Target = {
 };
 
 // Every outcome of the reaction, each a way to select that one connection.
-function OutcomeList({ doc, leader, onSelect }: { doc: StrategyDoc; leader: EdgeId; onSelect: (next: Selection) => void }) {
+function OutcomeList({ doc, group, onSelect }: { doc: StrategyDoc; group: EdgeId[]; onSelect: (next: Selection) => void }) {
 	return (
 		<div className="outcomes">
 			<p className="muted">Outcomes</p>
 			<ul>
-				{reactionGroup(doc, leader).map((id) => (
+				{group.filter((id) => doc.edges[id]).map((id) => (
 					<li key={id}>
 						<button onClick={() => onSelect({ type: 'edge', id })}>{doc.nodes[doc.edges[id]!.to]?.name || 'Untitled'}</button>
 					</li>
@@ -97,7 +97,7 @@ function ViewInspector({ doc, node, edge, reaction, onSelect }: Target) {
 				<div className="form" key={`reaction:${reaction}`}>
 					<h2>Reaction</h2>
 					<ReadField label="Reaction" value={doc.edges[reaction]?.label ?? ''} />
-					<OutcomeList doc={doc} leader={reaction} onSelect={onSelect} />
+					<OutcomeList doc={doc} group={reactionGroup(doc, reaction)} onSelect={onSelect} />
 				</div>
 			)}
 			{!node && !edge && !reaction && (
@@ -182,20 +182,15 @@ function EditInspector({ doc, node, edge, reaction, onSelect, error, exec, onDel
 				</div>
 			)}
 			{reaction && (
-				<div className="form" key={`reaction:${reaction}`}>
-					<h2>Reaction</h2>
-					<ReactionField doc={doc} edge={reaction} exec={exec} />
-					<OutcomeList doc={doc} leader={reaction} onSelect={onSelect} />
-					{doc.edges[reaction]?.label !== '' && (
-						<button onClick={() => onAddOption(reaction)}>+ Option for “{doc.edges[reaction]?.label}”</button>
-					)}
-					<button
-						className="danger"
-						onClick={() => remove({ type: 'deleteEdges', ids: reactionGroup(doc, reaction) })}
-					>
-						Delete reaction
-					</button>
-				</div>
+				<ReactionPanel
+					key={`reaction:${reaction}`}
+					doc={doc}
+					leader={reaction}
+					exec={exec}
+					onSelect={onSelect}
+					onAddOption={onAddOption}
+					onDelete={(ids) => remove({ type: 'deleteEdges', ids })}
+				/>
 			)}
 			{!node && !edge && !reaction && (
 				<div className="form">
@@ -237,10 +232,39 @@ function EditInspector({ doc, node, edge, reaction, onSelect, error, exec, onDel
 	);
 }
 
+type ReactionPanelProps = {
+	doc: StrategyDoc;
+	leader: EdgeId;
+	exec: (cmd: Command) => ApplyResult;
+	onSelect: (next: Selection) => void;
+	onAddOption: (edge: EdgeId) => void;
+	onDelete: (ids: EdgeId[]) => void;
+};
+
+function ReactionPanel({ doc, leader, exec, onSelect, onAddOption, onDelete }: ReactionPanelProps) {
+	const label = doc.edges[leader]?.label ?? '';
+	// While the words are cleared the reaction matches nothing, so keep the outcomes it had last.
+	const last = useRef(reactionGroup(doc, leader));
+	if (label.trim() !== '') last.current = reactionGroup(doc, leader);
+	const group = last.current;
+	return (
+		<div className="form">
+			<h2>Reaction</h2>
+			<ReactionField doc={doc} edge={leader} group={group} exec={exec} />
+			<OutcomeList doc={doc} group={group} onSelect={onSelect} />
+			{label !== '' && <button onClick={() => onAddOption(leader)}>+ Option for “{label}”</button>}
+			<button className="danger" onClick={() => onDelete(group.filter((id) => doc.edges[id]))}>
+				Delete reaction
+			</button>
+		</div>
+	);
+}
+
 // The outcomes sharing this reaction are fixed when the connection is selected, so clearing the words while
 // typing doesn't drop the others from the group or pull in unrelated "then" connections.
-function ReactionField({ doc, edge, exec }: { doc: StrategyDoc; edge: EdgeId; exec: (cmd: Command) => ApplyResult }) {
-	const [group] = useState(() => reactionGroup(doc, edge));
+function ReactionField({ doc, edge, group: frozen, exec }: { doc: StrategyDoc; edge: EdgeId; group?: EdgeId[]; exec: (cmd: Command) => ApplyResult }) {
+	const [own] = useState(() => reactionGroup(doc, edge));
+	const group = frozen ?? own;
 	return (
 		<>
 			<Field

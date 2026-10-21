@@ -29,6 +29,7 @@ export function StrategyEdgeView({
 	const fork = data?.fork ?? null;
 	const forkAt = useStore(useCallback((state: ReactFlowState) => forkKey(state, fork), [fork]));
 	let path: string;
+	let trunk: string | null = null;
 	let labelX: number;
 	let labelY: number;
 	if (forkAt === null) {
@@ -36,7 +37,7 @@ export function StrategyEdgeView({
 	} else {
 		const [x, y] = forkAt.split(',').map(Number) as [number, number];
 		const point = forkPoint({ x: sourceX, y: sourceY }, [{ x, y }]);
-		const [trunk] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX: point.x, targetY: point.y, targetPosition: Position.Top });
+		[trunk] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX: point.x, targetY: point.y, targetPosition: Position.Top });
 		const [branch, branchX, branchY] = getBezierPath({
 			sourceX: point.x,
 			sourceY: point.y,
@@ -45,7 +46,7 @@ export function StrategyEdgeView({
 			targetY,
 			targetPosition,
 		});
-		path = `${trunk} ${branch}`;
+		path = branch;
 		[labelX, labelY] = fork?.leader ? [point.x, point.y] : [branchX, branchY];
 	}
 	// Only the first outcome of a shared reaction draws its words; the others draw just their branch.
@@ -55,15 +56,36 @@ export function StrategyEdgeView({
 	const pillSelected = fork ? fork.selected : selected;
 	const editing = data?.editing ?? false;
 	const position = { transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` };
+	const dash = words === '' ? { strokeDasharray: '5 4' } : {};
 	return (
 		<>
+			{/* One trunk per reaction, drawn by the leader and lit while any outcome is selected. */}
+			{trunk !== null && fork?.leader && (
+				<>
+					<path
+						d={trunk}
+						className="react-flow__edge-path"
+						style={{ stroke: fork.selected ? EDGE_COLOR_SELECTED : EDGE_COLOR, ...dash }}
+					/>
+					<path
+						d={trunk}
+						fill="none"
+						stroke="transparent"
+						strokeWidth={20}
+						onClick={(e) => {
+							e.stopPropagation();
+							selectReaction(id);
+						}}
+					/>
+				</>
+			)}
 			<BaseEdge
 				id={id}
 				path={path}
 				markerEnd={markerEnd}
 				style={{
 					stroke: selected ? EDGE_COLOR_SELECTED : EDGE_COLOR,
-					...(words === '' ? { strokeDasharray: '5 4' } : {}),
+					...dash,
 				}}
 			/>
 			{editing && (

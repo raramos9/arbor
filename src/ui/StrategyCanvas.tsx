@@ -115,7 +115,6 @@ export function StrategyCanvas({ doc, selection, onSelect, access }: Props) {
 					zoomOnDoubleClick={false}
 					deleteKeyCode={null}
 					panActivationKeyCode={null}
-					elevateEdgesOnSelect
 					fitView
 				>
 					<Background />
