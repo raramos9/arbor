@@ -20,6 +20,7 @@ import {
 	findFreeSpot,
 	occupiedRects,
 	reactionSource,
+	settleSelection,
 	optionSpot,
 	reactionSpot,
 	type Rect,
@@ -32,7 +33,7 @@ import { BackLink } from './BackLink';
 import type { EditTarget } from './InlineEdit';
 import { Inspector } from './Inspector';
 import { OutlinePane } from './OutlinePane';
-import { entrySelection, type OutlineEntry } from './outline';
+import { entrySelection, reactionSelection, type OutlineEntry } from './outline';
 import { PublishControl } from './PublishControl';
 import { StrategyCanvas } from './StrategyCanvas';
 import { useEditor } from './useEditor';
@@ -88,6 +89,10 @@ function deletedName(doc: StrategyDoc, cmd: Command): string | null {
 		const edge = doc.edges[cmd.id];
 		return edge?.label ? `connection “${edge.label}”` : 'connection';
 	}
+	if (cmd.type === 'deleteEdges') {
+		const label = doc.edges[cmd.ids[0]!]?.label;
+		return label ? `reaction “${label}”` : `${cmd.ids.length} connections`;
+	}
 	if (cmd.type === 'removeMedia') {
 		const owner = cmd.owner.type === 'node' ? doc.nodes[cmd.owner.id] : doc.edges[cmd.owner.id];
 		const title = owner?.media[cmd.index]?.title;
@@ -131,9 +136,8 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 	}, [notice]);
 
 	useEffect(() => {
-		if (!selection) return;
-		const exists = selection.type === 'node' ? doc.nodes[selection.id] : doc.edges[selection.id];
-		if (!exists) setSelection(null);
+		const settled = settleSelection(doc, selection);
+		if (settled !== selection) setSelection(settled);
 	}, [doc, selection]);
 
 	useEffect(() => {
@@ -161,15 +165,17 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 
 	function deleteSelection() {
 		if (!selection) return;
-		const cmd: Command =
-			selection.type === 'node'
-				? { type: 'deleteNode', id: selection.id }
-				: { type: 'deleteEdge', id: selection.id };
+		let cmd: Command;
+		if (selection.type === 'node') cmd = { type: 'deleteNode', id: selection.id };
+		else if (selection.type === 'reaction') cmd = { type: 'deleteEdges', ids: reactionGroup(doc, selection.id) };
+		else cmd = { type: 'deleteEdge', id: selection.id };
 		if (exec(cmd).ok) select(null);
 	}
 
 	function startEdit(target: EditTarget) {
-		setSelection(target);
+		// Renaming the leader of a selected reaction keeps the whole reaction selected.
+		const keepsReaction = selection?.type === 'reaction' && target.type === 'edge' && target.id === selection.id;
+		if (!keepsReaction) setSelection(target);
 		setEditing(target);
 	}
 
@@ -186,7 +192,7 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 
 	function startEditingSelection(): boolean {
 		if (!selection) return false;
-		startEdit(selection);
+		startEdit(selection.type === 'reaction' ? { type: 'edge', id: selection.id } : selection);
 		return true;
 	}
 
@@ -287,6 +293,11 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 		revealNode(entry.node);
 	}
 
+	function selectReaction(leader: OutlineEntry) {
+		select(reactionSelection(leader));
+		revealNode(leader.node);
+	}
+
 	function onMove(id: string, at: Point) {
 		const node = doc.nodes[id];
 		if (node) run({ type: 'moveNode', id: node.id, at }, { persist: false });
@@ -344,7 +355,7 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 				</div>
 			</header>
 			<div className="editor">
-				<OutlinePane doc={doc} selection={selection} onSelectEntry={selectEntry} />
+				<OutlinePane doc={doc} selection={selection} onSelectEntry={selectEntry} onSelectReaction={selectReaction} />
 				<div className="canvas" ref={canvasRef}>
 					<div className="toolbar">
 						<button
@@ -390,6 +401,7 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 					doc={doc}
 					selection={selection}
 					error={error}
+					onSelect={select}
 					access={{ mode: 'edit', exec, onDeleted: () => select(null), onAddReaction: addReaction, onAddOption: addOption }}
 				/>
 			</div>

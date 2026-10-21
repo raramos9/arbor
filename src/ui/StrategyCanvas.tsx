@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Background, Controls, ReactFlow, type Connection, type EdgeChange, type NodeChange } from '@xyflow/react';
-import type { StrategyDoc } from '../model/strategy';
+import { reactionGroup, type StrategyDoc } from '../model/strategy';
 import { toFlowEdges, toFlowNodes, type Point, type Selection, type Size, type StrategyFlowNode } from './flow';
 import { InlineEditContext, noInlineEdit, type EditTarget } from './InlineEdit';
-import { SelectEdgeContext, StrategyEdgeView } from './StrategyEdgeView';
+import { SelectEdgeContext, SelectReactionContext, StrategyEdgeView } from './StrategyEdgeView';
 import { StrategyNodeView } from './StrategyNodeView';
 
 const nodeTypes = { strategy: StrategyNodeView };
@@ -44,6 +44,12 @@ export function StrategyCanvas({ doc, selection, onSelect, access }: Props) {
 	function selectEdge(id: string) {
 		const target = doc.edges[id];
 		if (target) onSelect({ type: 'edge', id: target.id });
+	}
+
+	function selectReaction(id: string) {
+		const target = doc.edges[id];
+		if (!target) return;
+		onSelect(reactionGroup(doc, target.id).length > 1 ? { type: 'reaction', id: target.id } : { type: 'edge', id: target.id });
 	}
 
 	function startNodeEdit(id: string) {
@@ -88,6 +94,7 @@ export function StrategyCanvas({ doc, selection, onSelect, access }: Props) {
 
 	return (
 		<SelectEdgeContext.Provider value={selectEdge}>
+			<SelectReactionContext.Provider value={selectReaction}>
 			<InlineEditContext.Provider value={inlineEdit}>
 				<ReactFlow
 					nodes={nodes}
@@ -109,12 +116,14 @@ export function StrategyCanvas({ doc, selection, onSelect, access }: Props) {
 					zoomOnDoubleClick={false}
 					deleteKeyCode={null}
 					panActivationKeyCode={null}
+					elevateEdgesOnSelect
 					fitView
 				>
 					<Background />
 					<Controls showInteractive={false} />
 				</ReactFlow>
 			</InlineEditContext.Provider>
+			</SelectReactionContext.Provider>
 		</SelectEdgeContext.Provider>
 	);
 }

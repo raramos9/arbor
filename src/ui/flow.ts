@@ -2,7 +2,12 @@ import { MarkerType, type Edge, type Node } from '@xyflow/react';
 import { reactionGroup, type StrategyDoc, type StrategyEdge } from '../model/strategy';
 import type { EdgeId, NodeId } from '../model/strategy';
 
-export type Selection = { type: 'node'; id: NodeId } | { type: 'edge'; id: EdgeId } | null;
+// A reaction selection names the group by its leader edge; the members are recomputed so the selection never goes stale.
+export type Selection =
+	| { type: 'node'; id: NodeId }
+	| { type: 'edge'; id: EdgeId }
+	| { type: 'reaction'; id: EdgeId }
+	| null;
 
 export type StrategyNodeData = {
 	name: string;
@@ -13,7 +18,7 @@ export type StrategyNodeData = {
 };
 export type StrategyFlowNode = Node<StrategyNodeData, 'strategy'>;
 // Outcomes of one reaction share a fork: one trunk from the source, one pill, then a branch to each target.
-export type EdgeFork = { leader: boolean; targets: string[] };
+export type EdgeFork = { leader: boolean; targets: string[]; selected: boolean };
 export type StrategyEdgeData = { label: string; mediaCount: number; editing: boolean; fork: EdgeFork | null };
 export type StrategyFlowEdge = Edge<StrategyEdgeData, 'strategy'>;
 export type Size = { width: number; height: number };
@@ -76,13 +81,37 @@ export function toFlowNodes(
 	});
 }
 
-function forkOf(doc: StrategyDoc, edge: StrategyEdge): EdgeFork | null {
+export function selectedEdgeIds(doc: StrategyDoc, selection: Selection): Set<EdgeId> {
+	if (selection?.type === 'edge') return new Set([selection.id]);
+	if (selection?.type === 'reaction') return new Set(reactionGroup(doc, selection.id));
+	return new Set();
+}
+
+// Keeps the selection pointing at something that still exists.
+// A reaction that has shrunk to one outcome becomes that outcome's connection, unless its words were just cleared.
+export function settleSelection(doc: StrategyDoc, selection: Selection): Selection {
+	if (!selection) return selection;
+	if (selection.type === 'node') return doc.nodes[selection.id] ? selection : null;
+	const leader = doc.edges[selection.id];
+	if (!leader) return null;
+	if (selection.type === 'reaction' && leader.label !== '' && reactionGroup(doc, selection.id).length < 2) {
+		return { type: 'edge', id: selection.id };
+	}
+	return selection;
+}
+
+function forkOf(doc: StrategyDoc, edge: StrategyEdge, selected: ReadonlySet<EdgeId>): EdgeFork | null {
 	const group = reactionGroup(doc, edge.id);
 	if (group.length < 2) return null;
-	return { leader: group[0] === edge.id, targets: group.map((id) => doc.edges[id]!.to) };
+	return {
+		leader: group[0] === edge.id,
+		targets: group.map((id) => doc.edges[id]!.to),
+		selected: group.some((id) => selected.has(id)),
+	};
 }
 
 export function toFlowEdges(doc: StrategyDoc, selection: Selection, editing: Selection): StrategyFlowEdge[] {
+	const selected = selectedEdgeIds(doc, selection);
 	return Object.values(doc.edges).map((edge) => ({
 		id: edge.id,
 		type: 'strategy',
@@ -92,11 +121,11 @@ export function toFlowEdges(doc: StrategyDoc, selection: Selection, editing: Sel
 			label: edge.label,
 			mediaCount: edge.media.length,
 			editing: editing?.type === 'edge' && editing.id === edge.id,
-			fork: forkOf(doc, edge),
+			fork: forkOf(doc, edge, selected),
 		},
 		ariaLabel: edgeAriaLabel(doc, edge),
 		markerEnd: { type: MarkerType.ArrowClosed },
-		selected: selection?.type === 'edge' && selection.id === edge.id,
+		selected: selected.has(edge.id),
 	}));
 }
 
@@ -184,7 +213,7 @@ const REACTION_GAP_Y = 60;
 
 export function reactionSource(doc: StrategyDoc, selection: Selection): NodeId {
 	if (selection?.type === 'node' && doc.nodes[selection.id]) return selection.id;
-	if (selection?.type === 'edge') {
+	if (selection?.type === 'edge' || selection?.type === 'reaction') {
 		const edge = doc.edges[selection.id];
 		if (edge) return edge.to;
 	}

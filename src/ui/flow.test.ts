@@ -11,6 +11,8 @@ import {
 	reactionSource,
 	optionSpot,
 	reactionSpot,
+	selectedEdgeIds,
+	settleSelection,
 	toFlowEdges,
 	toFlowNodes,
 	type StrategyFlowEdge,
@@ -93,6 +95,43 @@ describe('isInside', () => {
 	});
 });
 
+function sharedReactionDoc() {
+	const doc = armDragDoc();
+	doc.edges['e3'] = { ...doc.edges['e3']!, label: 'arm stays displaced' };
+	return doc;
+}
+
+describe('selectedEdgeIds', () => {
+	const doc = sharedReactionDoc();
+	const eid = (s: string) => EdgeIdSchema.parse(s);
+
+	it('is the whole group for a reaction, however it is reached', () => {
+		expect([...selectedEdgeIds(doc, { type: 'reaction', id: eid('e2') })].sort()).toEqual(['e2', 'e3']);
+	});
+	it('is just the edge for an edge, and empty otherwise', () => {
+		expect([...selectedEdgeIds(doc, { type: 'edge', id: eid('e3') })]).toEqual(['e3']);
+		expect(selectedEdgeIds(doc, { type: 'node', id: NodeIdSchema.parse('triangle') }).size).toBe(0);
+		expect(selectedEdgeIds(doc, null).size).toBe(0);
+	});
+});
+
+describe('settleSelection', () => {
+	const eid = (s: string) => EdgeIdSchema.parse(s);
+
+	it('keeps a reaction selection while it still has several outcomes', () => {
+		const selection = { type: 'reaction', id: eid('e2') } as const;
+		expect(settleSelection(sharedReactionDoc(), selection)).toBe(selection);
+	});
+	it('falls back to the survivor when the group shrinks to one', () => {
+		expect(settleSelection(armDragDoc(), { type: 'reaction', id: eid('e2') })).toEqual({ type: 'edge', id: 'e2' });
+	});
+	it('drops a selection whose target is gone', () => {
+		expect(settleSelection(armDragDoc(), { type: 'reaction', id: eid('ghost') })).toBeNull();
+		expect(settleSelection(armDragDoc(), { type: 'edge', id: eid('ghost') })).toBeNull();
+		expect(settleSelection(armDragDoc(), { type: 'node', id: NodeIdSchema.parse('ghost') })).toBeNull();
+	});
+});
+
 describe('toFlowEdges', () => {
 	const clip: Media = { provider: 'web', title: '', url: 'https://example.com' };
 
@@ -114,8 +153,8 @@ describe('toFlowEdges', () => {
 		const forks = toFlowEdges(doc, null, null).map((edge) => edge.data?.fork);
 		expect(forks).toEqual([
 			null,
-			{ leader: true, targets: ['back-take', 'triangle'] },
-			{ leader: false, targets: ['back-take', 'triangle'] },
+			{ leader: true, targets: ['back-take', 'triangle'], selected: false },
+			{ leader: false, targets: ['back-take', 'triangle'], selected: false },
 		]);
 	});
 
@@ -124,6 +163,20 @@ describe('toFlowEdges', () => {
 		const edges = toFlowEdges(doc, { type: 'edge', id: EdgeIdSchema.parse('e2') }, null);
 		expect(edges.map((edge) => edge.selected)).toEqual([false, true, false]);
 		expect(edges[1]!.ariaLabel).toBe(edgeAriaLabel(doc, doc.edges['e2']!));
+	});
+
+	it('marks every outcome and the pill when the reaction is selected', () => {
+		const doc = sharedReactionDoc();
+		const edges = toFlowEdges(doc, { type: 'reaction', id: EdgeIdSchema.parse('e2') }, null);
+		expect(edges.map((edge) => edge.selected)).toEqual([false, true, true]);
+		expect(edges.map((edge) => edge.data?.fork?.selected)).toEqual([undefined, true, true]);
+	});
+
+	it('lights the pill, but only the one path, when a single outcome is selected', () => {
+		const doc = sharedReactionDoc();
+		const edges = toFlowEdges(doc, { type: 'edge', id: EdgeIdSchema.parse('e3') }, null);
+		expect(edges.map((edge) => edge.selected)).toEqual([false, false, true]);
+		expect(edges.map((edge) => edge.data?.fork?.selected)).toEqual([undefined, true, true]);
 	});
 
 	it('marks only the edge being edited', () => {
@@ -173,6 +226,10 @@ describe('reactionSource', () => {
 
 	it('uses the target of the selected edge', () => {
 		expect(reactionSource(doc, { type: 'edge', id: EdgeIdSchema.parse('e2') })).toBe('back-take');
+	});
+
+	it('uses the target of the leader for a reaction', () => {
+		expect(reactionSource(doc, { type: 'reaction', id: EdgeIdSchema.parse('e2') })).toBe('back-take');
 	});
 
 	it('falls back to the start node', () => {

@@ -10,7 +10,7 @@ import type { Selection } from './flow';
 import { BackLink } from './BackLink';
 import { Inspector } from './Inspector';
 import { OutlinePane } from './OutlinePane';
-import { entrySelection, type OutlineEntry } from './outline';
+import { entrySelection, reactionSelection, type OutlineEntry } from './outline';
 import { StrategyCanvas } from './StrategyCanvas';
 import { useRevealNode } from './useRevealNode';
 
@@ -99,6 +99,11 @@ function Viewer({ published }: { published: PublishedStrategy }) {
 		revealNode(entry.node);
 	}
 
+	function selectReaction(leader: OutlineEntry) {
+		setSelection(reactionSelection(leader));
+		revealNode(leader.node);
+	}
+
 	return (
 		<div className="page editor-page">
 			<header className="header">
@@ -123,11 +128,11 @@ function Viewer({ published }: { published: PublishedStrategy }) {
 				</div>
 			</header>
 			<div className="editor">
-				<OutlinePane doc={doc} selection={selection} onSelectEntry={selectEntry} />
+				<OutlinePane doc={doc} selection={selection} onSelectEntry={selectEntry} onSelectReaction={selectReaction} />
 				<div className="canvas" ref={canvasRef}>
 					<StrategyCanvas doc={doc} selection={selection} onSelect={setSelection} access={{ mode: 'view' }} />
 				</div>
-				<Inspector doc={doc} selection={selection} error={null} access={{ mode: 'view' }} />
+				<Inspector doc={doc} selection={selection} error={null} onSelect={setSelection} access={{ mode: 'view' }} />
 			</div>
 		</div>
 	);

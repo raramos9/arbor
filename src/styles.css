@@ -676,3 +676,6 @@ label.chip:has(input:focus-visible) { outline: 2px solid var(--accent); outline-
   .card:has(.card-link:hover) { transform: none; }
   .card.skeleton { animation: none; }
 }
+
+.outcomes ul { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.outcomes li button { width: 100%; text-align: left; }
