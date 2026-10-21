@@ -1,9 +1,10 @@
 import { useEffect, useId, useState } from 'react';
 import type { PublishedSummary, SummaryCursor, UserId } from '../model/publishing';
 import { listPublished } from '../publishing';
-import { toOutline, previewLines } from './outline';
+import { CardPreview } from './CardPreview';
+import { toOutline } from './outline';
 import { groupByStart } from './feedGroups';
-import { miniTree, plural, timeAgo } from './miniTree';
+import { miniTree, plural, RULESET_LABEL, timeAgo } from './miniTree';
 import { MiniTreeView } from './MiniTreeView';
 import { profileHref, publishedHref } from '../route';
 import { cloud } from '../supabase';
@@ -144,13 +145,8 @@ export function PublishedFeed({ owner }: { owner?: UserId }) {
 	}
 }
 
-function displayName(name: string): string {
-	return name || 'Untitled';
-}
-
 function FeedCard({ item, showHandle }: { item: PublishedSummary; showHandle: boolean }) {
 	const outline = toOutline(item.doc);
-	const { lines, more } = previewLines(outline, 3);
 	const id = useId();
 	return (
 		<li className="card">
@@ -158,34 +154,15 @@ function FeedCard({ item, showHandle }: { item: PublishedSummary; showHandle: bo
 				href={publishedHref(item.id)}
 				className="card-link"
 				aria-labelledby={`${id}-title`}
-				aria-describedby={lines.length > 0 ? `${id}-meta ${id}-preview` : `${id}-meta`}
+				aria-describedby={`${id}-meta ${id}-preview`}
 			>
-				<MiniTreeView tree={miniTree(outline)} ruleset={item.doc.ruleset} />
+				<MiniTreeView tree={miniTree(outline)} />
 				<div className="card-body">
 					<h3 id={`${id}-title`} className="card-title">
 						{item.doc.title || 'Untitled'}
 					</h3>
-					{lines.length > 0 && (
-						<ol id={`${id}-preview`} className="preview">
-							{lines.map((line, index) => (
-								<li key={index} style={{ paddingLeft: line.depth * 10 }}>
-									{'options' in line ? (
-<em>{line.phrase}</em>
-									) : (
-										<>
-											{line.phrase && <em>{line.phrase} </em>}
-											{line.jump === null
-												? displayName(line.name)
-												: line.jump === 'back'
-													? `back to ${displayName(line.name)}`
-													: `${displayName(line.name)}, continued above`}
-										</>
-									)}
-								</li>
-							))}
-							{more > 0 && <li className="preview-more">+{more} more</li>}
-						</ol>
-					)}
+					<p className="card-start">{RULESET_LABEL[item.doc.ruleset]}</p>
+					<CardPreview id={`${id}-preview`} outline={outline} />
 				</div>
 			</a>
 			<div className="card-foot">
