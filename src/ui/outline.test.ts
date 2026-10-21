@@ -200,15 +200,15 @@ describe('previewLines', () => {
 			],
 			more: 0,
 		});
-		expect(previewLines(toOutline(doc), 2).more).toBe(3);
+		expect(previewLines(toOutline(doc), 2).more).toBe(2);
 	});
 
-	it('spends the budget across a group of outcomes before any outcome descendants', () => {
+	it('shows every outcome of a reaction before any outcome descendants, without the group line using the budget', () => {
 		const doc = graph(
 			['a', 'b', 'c', 'd', 'e', 'f', 'g'],
 			[['a', 'b', 'posts'], ['b', 'e'], ['e', 'f'], ['a', 'c', 'posts'], ['a', 'd', 'posts'], ['f', 'g']],
 		);
-		const preview = previewLines(toOutline(doc), 4);
+		const preview = previewLines(toOutline(doc), 3);
 		expect(preview.lines).toEqual([
 			{ depth: 0, phrase: 'if posts', options: 3 },
 			{ depth: 1, phrase: '', name: 'B', jump: null },
