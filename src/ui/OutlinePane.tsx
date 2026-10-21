@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import type { NodeId, StrategyDoc } from '../model/strategy';
 import type { Selection } from './flow';
-import { isLit, reactionPhrase, toOutline, type Outline, type OutlineEntry, type OutlineStep } from './outline';
+import {
+	groupSameReaction,
+	isLit,
+	reactionPhrase,
+	toOutline,
+	type Outline,
+	type OutlineEntry,
+	type OutlineStep,
+} from './outline';
 
 type Props = {
 	doc: StrategyDoc;
@@ -83,9 +91,28 @@ export function OutlinePane({ doc, selection, onSelectEntry }: Props) {
 		);
 	}
 
-	function renderEntry(entry: OutlineEntry, label?: string) {
+	function renderRows(entries: readonly OutlineEntry[]) {
+		return groupSameReaction(entries).map((row) =>
+			row.kind === 'entry' ? (
+				renderEntry(row.entry)
+			) : (
+				<li key={`group:${row.entries[0]!.edge}`}>
+					<div className="line-group">
+						<span className="line-disclosure-gap" />
+						<span className="line-text">
+							<em>{row.phrase}</em>
+							<span className="line-label">{row.entries.length} options</span>
+						</span>
+					</div>
+					<ul>{row.entries.map((entry) => renderEntry(entry, undefined, true))}</ul>
+				</li>
+			),
+		);
+	}
+
+	function renderEntry(entry: OutlineEntry, label?: string, grouped = false) {
 		const lit = isLit(entry, selection);
-		const phrase = entry.kind === 'step' && entry.edge === null ? null : reactionPhrase(entry.reaction);
+		const phrase = grouped || (entry.kind === 'step' && entry.edge === null) ? null : reactionPhrase(entry.reaction);
 		const isCollapsed = entry.kind === 'step' && collapsed.has(entry.node);
 		const hasChildren = entry.kind === 'step' && entry.next.length > 0;
 		const name = displayName(entry.name);
@@ -118,7 +145,7 @@ export function OutlinePane({ doc, selection, onSelectEntry }: Props) {
 						{entry.kind === 'step' && !hasChildren && <span className="line-dot" aria-hidden="true" />}
 					</button>
 				</div>
-				{entry.kind === 'step' && hasChildren && !isCollapsed && <ul>{entry.next.map((child) => renderEntry(child))}</ul>}
+				{entry.kind === 'step' && hasChildren && !isCollapsed && <ul>{renderRows(entry.next)}</ul>}
 			</li>
 		);
 	}

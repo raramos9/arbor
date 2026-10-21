@@ -1,15 +1,20 @@
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { deleteClip, listClipIds } from '../clips';
 import { importStrategy, readArborFile } from '../exchange';
 import { planImport, type ArborFile } from '../model/exchange';
 import { unreferencedClips } from '../model/media';
-import { positionName, type Position } from '../model/positions';
-import { createStrategy, RulesetSchema, SideSchema, type Ruleset, type Side, type StrategyDoc } from '../model/strategy';
-import { editorHref, exploreHref, navigate } from '../route';
-import { hasStrategy, listStrategies, loadStrategy, saveStrategy } from '../storage';
-import { cloud } from '../supabase';
-import { AccountControl } from './AccountControl';
-import { PositionField } from './PositionField';
+import { positionName, startLabel, type PositionId } from '../model/positions';
+import type { StrategyDoc } from '../model/strategy';
+import { editorHref, navigate } from '../route';
+import { hasStrategy, listStrategies, loadStrategy } from '../storage';
+import { AppHeader } from './AppHeader';
+import { ImportIcon, PlusIcon } from './Icons';
+import { miniTree, plural, strategyStats, timeAgo } from './miniTree';
+import { MiniTreeView } from './MiniTreeView';
+import { NewStrategyDialog } from './NewStrategyDialog';
+import { toOutline } from './outline';
+
+const DEFAULT_POSITION: PositionId = 'closed-guard';
 
 type ImportState =
 	| { kind: 'idle' }
@@ -24,11 +29,7 @@ async function collectClips(docs: StrategyDoc[]) {
 
 export function ListScreen() {
 	const [entries] = useState(listStrategies);
-	const [title, setTitle] = useState('');
-	const [position, setPosition] = useState<Position | null>({ kind: 'listed', id: 'closed-guard' });
-	const [ruleset, setRuleset] = useState<Ruleset>('both');
-	const [side, setSide] = useState<Side>('bottom');
-	const [error, setError] = useState<string | null>(null);
+	const [creating, setCreating] = useState<PositionId | null>(null);
 	const [importState, setImportState] = useState<ImportState>({ kind: 'idle' });
 	const fileInput = useRef<HTMLInputElement>(null);
 
@@ -38,28 +39,10 @@ export function ListScreen() {
 		void collectClips(docs);
 	}, [entries]);
 
-	const valid = title.trim() !== '' && position !== null;
 	const sorted = [...entries].sort((a, b) => {
 		if (!a.ok || !b.ok) return Number(a.ok) - Number(b.ok);
 		return b.doc.updatedAt.localeCompare(a.doc.updatedAt);
 	});
-
-	function onSubmit(e: FormEvent) {
-		e.preventDefault();
-		if (!valid || !position) return;
-		const doc = createStrategy({
-			title: title.trim(),
-			position,
-			ruleset,
-			startingSide: side,
-		});
-		const saved = saveStrategy(doc);
-		if (!saved.ok) {
-			setError(saved.error);
-			return;
-		}
-		navigate(editorHref(doc.id));
-	}
 
 	async function runImport(file: ArborFile) {
 		const imported = await importStrategy(file);
@@ -102,15 +85,14 @@ export function ListScreen() {
 
 	return (
 		<div className="page">
-			<header className="header">
-				<h1>Arbor</h1>
-				{cloud && <a href={exploreHref}>Explore</a>}
-				{cloud && <AccountControl client={cloud} />}
-			</header>
-			<main className="list-layout">
-				<section>
-					<div className="section-head">
-						<h2>Strategies</h2>
+			<AppHeader current="strategies" />
+			<main className="shelf-page">
+				<div className="page-head">
+					<div className="page-title">
+						<h1>Your strategies</h1>
+						<p className="muted">Saved in this browser.</p>
+					</div>
+					<div className="page-actions">
 						<input
 							ref={fileInput}
 							type="file"
@@ -118,91 +100,117 @@ export function ListScreen() {
 							hidden
 							onChange={(e) => void onPickFile(e)}
 						/>
-						<button type="button" onClick={() => fileInput.current?.click()}>
+						<button type="button" className="with-icon" onClick={() => fileInput.current?.click()}>
+							<ImportIcon />
 							Import
 						</button>
+						<button type="button" className="primary with-icon" onClick={() => setCreating(DEFAULT_POSITION)}>
+							<PlusIcon />
+							New strategy
+						</button>
 					</div>
-					{importState.kind === 'error' && <p className="error">{importState.message}</p>}
-					{importState.kind === 'confirming' && (
-						<div className="confirm">
-							<p>
-								{importState.existingTitle === null
-									? 'A strategy with this id already exists but cannot be read. Replace it with the imported file?'
-									: `“${importState.existingTitle}” already exists in this browser. Replace it with the imported file?`}
-							</p>
-							<div className="row">
-								<button type="button" onClick={() => setImportState({ kind: 'idle' })}>
-									Cancel
-								</button>
-								<button
-									type="button"
-									className="danger"
-									onClick={() => {
-										const { file } = importState;
-										setImportState({ kind: 'idle' });
-										void runImport(file);
-									}}
-								>
-									Replace
-								</button>
-							</div>
+				</div>
+				{importState.kind === 'error' && <p className="banner error">{importState.message}</p>}
+				{importState.kind === 'confirming' && (
+					<div className="banner">
+						<p>
+							{importState.existingTitle === null
+								? 'A strategy with this id already exists but cannot be read. Replace it with the imported file?'
+								: `“${importState.existingTitle}” already exists in this browser. Replace it with the imported file?`}
+						</p>
+						<div className="row">
+							<button type="button" onClick={() => setImportState({ kind: 'idle' })}>
+								Cancel
+							</button>
+							<button
+								type="button"
+								className="danger"
+								onClick={() => {
+									const { file } = importState;
+									setImportState({ kind: 'idle' });
+									void runImport(file);
+								}}
+							>
+								Replace
+							</button>
 						</div>
-					)}
-					{sorted.length === 0 && <p className="muted">No strategies yet. Create one or import a file.</p>}
-					<ul className="strategy-list">
+					</div>
+				)}
+				{sorted.length === 0 ? (
+					<FirstPlan onStart={setCreating} />
+				) : (
+					<ul className="card-grid">
 						{sorted.map((entry) =>
 							entry.ok ? (
-								<li key={entry.id}>
-									<a href={editorHref(entry.id)}>
-										<strong>{entry.doc.title || 'Untitled'}</strong>
-										<span className="muted">
-											{entry.doc.position && `${positionName(entry.doc.position)} · `}
-											{entry.doc.ruleset} · starts {entry.doc.startingSide}
-										</span>
-									</a>
-								</li>
+								<StrategyCard key={entry.id} doc={entry.doc} />
 							) : (
-								<li key={entry.id} className="corrupt">
-									<a href={editorHref(entry.id)}>
-										<strong>Unreadable strategy</strong>
-										<span className="muted">{entry.id}</span>
+								<li key={entry.id} className="card corrupt">
+									<a href={editorHref(entry.id)} className="card-link">
+										<div className="card-body">
+											<h2 className="card-title">Unreadable strategy</h2>
+											<p className="card-meta">{entry.id}</p>
+										</div>
 									</a>
 								</li>
 							),
 						)}
+						<li className="ghost-cell">
+							<button type="button" className="card ghost" onClick={() => setCreating(DEFAULT_POSITION)}>
+								<PlusIcon size={16} />
+								New strategy
+							</button>
+						</li>
 					</ul>
-				</section>
-				<section>
-					<h2>New strategy</h2>
-					<form className="form" onSubmit={onSubmit}>
-						<label>
-							Title
-							<input value={title} onChange={(e) => setTitle(e.target.value)} />
-						</label>
-						<PositionField value={position} onChange={setPosition} allowNone={false} />
-						<label>
-							Ruleset
-							<select value={ruleset} onChange={(e) => setRuleset(RulesetSchema.parse(e.target.value))}>
-								{RulesetSchema.options.map((o) => (
-									<option key={o}>{o}</option>
-								))}
-							</select>
-						</label>
-						<label>
-							Starting side
-							<select value={side} onChange={(e) => setSide(SideSchema.parse(e.target.value))}>
-								{SideSchema.options.map((o) => (
-									<option key={o}>{o}</option>
-								))}
-							</select>
-						</label>
-						{error && <p className="error">{error}</p>}
-						<button type="submit" className="primary" disabled={!valid}>
-							New strategy
-						</button>
-					</form>
-				</section>
+				)}
 			</main>
+			{creating && <NewStrategyDialog initial={creating} onClose={() => setCreating(null)} />}
 		</div>
+	);
+}
+
+function StrategyCard({ doc }: { doc: StrategyDoc }) {
+	const stats = strategyStats(doc);
+	return (
+		<li className="card">
+			<a href={editorHref(doc.id)} className="card-link">
+				<MiniTreeView tree={miniTree(toOutline(doc))} ruleset={doc.ruleset} />
+				<div className="card-body">
+					<h2 className="card-title">{doc.title || 'Untitled'}</h2>
+					<p className="card-start">
+						{doc.position ? startLabel(doc.position, doc.startingSide) : `Starts ${doc.startingSide}`}
+						{doc.origin && ` · fork of @${doc.origin.handle}`}
+					</p>
+					<p className="card-meta">
+						<span>
+							{plural(stats.steps, 'step')} · {plural(stats.reactions, 'reaction')}
+						</span>
+						<span>{timeAgo(doc.updatedAt)}</span>
+					</p>
+				</div>
+			</a>
+		</li>
+	);
+}
+
+const QUICK_STARTS: PositionId[] = ['closed-guard', 'half-guard', 'standing', 'side-control', 'mount', 'back'];
+
+function FirstPlan({ onStart }: { onStart: (position: PositionId) => void }) {
+	return (
+		<section className="first-plan" aria-labelledby="first-plan-title">
+			<h2 id="first-plan-title">Map your first game plan</h2>
+			<p className="muted">
+				Pick where it starts, then add what you try and how your opponent reacts, until each line ends.
+			</p>
+			<div className="chips">
+				{QUICK_STARTS.map((id) => (
+					<button key={id} type="button" className="chip" onClick={() => onStart(id)}>
+						{positionName({ kind: 'listed', id })}
+					</button>
+				))}
+				<button type="button" className="chip" onClick={() => onStart(DEFAULT_POSITION)}>
+					Other position…
+				</button>
+			</div>
+		</section>
 	);
 }

@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { armDragDoc } from '../model/fixtures';
 import { EdgeIdSchema, NodeIdSchema, type StrategyDoc } from '../model/strategy';
-import { entrySelection, isLit, toOutline, reactionPhrase, previewLines, type OutlineEntry, type OutlineStep } from './outline';
+import {
+	entrySelection,
+	groupSameReaction,
+	isLit,
+	toOutline,
+	reactionPhrase,
+	previewLines,
+	type OutlineEntry,
+	type OutlineStep,
+} from './outline';
 
 function graph(nodeNames: string[], links: [string, string, string?][], root = nodeNames[0]!): StrategyDoc {
 	const doc = armDragDoc();
@@ -163,7 +172,7 @@ describe('previewLines', () => {
 	it('marks jumps back or above', () => {
 		const doc = graph(['a', 'b', 'c'], [['a', 'b'], ['a', 'c'], ['b', 'a'], ['c', 'b']]);
 		const { lines } = previewLines(toOutline(doc), 10);
-		expect(lines.filter((line) => line.jump).map((line) => [line.name, line.jump])).toEqual([
+		expect(lines.flatMap((line) => ('jump' in line && line.jump ? [[line.name, line.jump]] : []))).toEqual([
 			['A', 'back'],
 			['B', 'above'],
 		]);
@@ -172,8 +181,26 @@ describe('previewLines', () => {
 	it('counts rows beyond the limit and ignores unlinked nodes', () => {
 		const doc = graph(['a', 'b', 'c', 'd', 'x'], [['a', 'b'], ['b', 'c'], ['c', 'd']]);
 		const preview = previewLines(toOutline(doc), 2);
-		expect(preview.lines.map((line) => line.name)).toEqual(['B', 'C']);
+		expect(preview.lines.map((line) => 'name' in line && line.name)).toEqual(['B', 'C']);
 		expect(preview.more).toBe(1);
+	});
+
+	it('lists same-reaction outcomes once under their reaction', () => {
+		const doc = graph(
+			['a', 'b', 'c', 'd', 'e'],
+			[['a', 'b', 'posts arm out'], ['b', 'e', 'he stacks'], ['a', 'c', 'posts arm out'], ['a', 'd', 'he sits back']],
+		);
+		expect(previewLines(toOutline(doc), 10)).toEqual({
+			lines: [
+				{ depth: 0, phrase: 'if posts arm out', options: 2 },
+				{ depth: 1, phrase: '', name: 'B', jump: null },
+				{ depth: 2, phrase: 'if he stacks', name: 'E', jump: null },
+				{ depth: 1, phrase: '', name: 'C', jump: null },
+				{ depth: 0, phrase: 'if he sits back', name: 'D', jump: null },
+			],
+			more: 0,
+		});
+		expect(previewLines(toOutline(doc), 2).more).toBe(3);
 	});
 
 	it('handles a chain longer than the call stack', () => {
@@ -182,5 +209,35 @@ describe('previewLines', () => {
 		const preview = previewLines(toOutline(doc), 3);
 		expect(preview.lines.map((line) => line.depth)).toEqual([0, 1, 2]);
 		expect(preview.more).toBe(19996);
+	});
+});
+
+describe('groupSameReaction', () => {
+	const next = (links: [string, string, string?][]) =>
+		toOutline(graph(['a', 'b', 'c', 'd', 'e'], links)).start.next;
+
+	it('puts siblings with the same reaction under it once, where the first one was', () => {
+		const rows = groupSameReaction(
+			next([
+				['a', 'b', 'he stands'],
+				['a', 'c', 'posts arm out'],
+				['a', 'd', 'If Posts arm out '],
+				['a', 'e', 'he stands up'],
+			]),
+		);
+		expect(rows.map((row) => row.kind)).toEqual(['entry', 'group', 'entry']);
+		expect(rows[1]).toMatchObject({ kind: 'group', phrase: 'if posts arm out' });
+		expect(rows[1]!.kind === 'group' && rows[1]!.entries.map((entry) => entry.node)).toEqual(['c', 'd']);
+	});
+
+	it('never groups connections without a reaction', () => {
+		const rows = groupSameReaction(next([['a', 'b'], ['a', 'c']]));
+		expect(rows.map((row) => row.kind)).toEqual(['entry', 'entry']);
+	});
+
+	it('groups a jump with steps that share its reaction', () => {
+		const rows = groupSameReaction(next([['a', 'b', 'he posts'], ['a', 'b', 'he posts']]));
+		expect(rows).toHaveLength(1);
+		expect(rows[0]!.kind === 'group' && rows[0]!.entries.map((entry) => entry.kind)).toEqual(['step', 'jump']);
 	});
 });

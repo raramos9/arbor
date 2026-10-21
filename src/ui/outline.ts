@@ -90,22 +90,40 @@ export function reactionPhrase(typed: string): string {
 	return `if ${reaction}`;
 }
 
-export type PreviewLine = { depth: number; phrase: string; name: string; jump: 'back' | 'above' | null };
+export type PreviewLine =
+	| { depth: number; phrase: string; name: string; jump: 'back' | 'above' | null }
+	| { depth: number; phrase: string; options: number };
 
+type PreviewItem =
+	| { kind: 'entry'; entry: OutlineEntry; depth: number; grouped: boolean }
+	| { kind: 'group'; phrase: string; entries: OutlineEntry[]; depth: number };
+
+// A grouped outcome carries no phrase of its own: the group line above it already says the reaction.
 export function previewLines(outline: Outline, limit: number): { lines: PreviewLine[]; more: number } {
 	const lines: PreviewLine[] = [];
 	let total = 0;
-	const stack = outline.start.next.map((entry) => ({ entry, depth: 0 })).reverse();
+	const childItems = (entries: readonly OutlineEntry[], depth: number): PreviewItem[] =>
+		groupSameReaction(entries).map((row) =>
+			row.kind === 'entry'
+				? { kind: 'entry', entry: row.entry, depth, grouped: false }
+				: { kind: 'group', phrase: row.phrase, entries: row.entries, depth },
+		);
+	const stack = childItems(outline.start.next, 0).reverse();
 	for (let item = stack.pop(); item; item = stack.pop()) {
-		const { entry, depth } = item;
 		total += 1;
+		if (item.kind === 'group') {
+			if (lines.length < limit) lines.push({ depth: item.depth, phrase: item.phrase, options: item.entries.length });
+			for (let i = item.entries.length - 1; i >= 0; i--) {
+				stack.push({ kind: 'entry', entry: item.entries[i]!, depth: item.depth + 1, grouped: true });
+			}
+			continue;
+		}
+		const { entry, depth, grouped } = item;
 		if (lines.length < limit) {
 			const jump = entry.kind === 'jump' ? (entry.back ? 'back' : 'above') : null;
-			lines.push({ depth, phrase: reactionPhrase(entry.reaction), name: entry.name, jump });
+			lines.push({ depth, phrase: grouped ? '' : reactionPhrase(entry.reaction), name: entry.name, jump });
 		}
-		if (entry.kind === 'step') {
-			for (let i = entry.next.length - 1; i >= 0; i--) stack.push({ entry: entry.next[i]!, depth: depth + 1 });
-		}
+		if (entry.kind === 'step') stack.push(...childItems(entry.next, depth + 1).reverse());
 	}
 	return { lines, more: total - lines.length };
 }
@@ -118,4 +136,31 @@ export function isLit(entry: OutlineEntry, selection: Selection): boolean {
 
 export function entrySelection(entry: OutlineEntry): Selection {
 	return entry.kind === 'jump' ? { type: 'edge', id: entry.edge } : { type: 'node', id: entry.node };
+}
+
+export type OutlineRow = { kind: 'entry'; entry: OutlineEntry } | { kind: 'group'; phrase: string; entries: OutlineEntry[] };
+
+// Siblings that share a typed reaction are the outcomes of one reaction, so they sit under it once.
+export function groupSameReaction(entries: readonly OutlineEntry[]): OutlineRow[] {
+	const keyOf = (entry: OutlineEntry) => entry.reaction.trim().replace(/^if /i, '').toLowerCase();
+	const counts = new Map<string, number>();
+	for (const entry of entries) counts.set(keyOf(entry), (counts.get(keyOf(entry)) ?? 0) + 1);
+	const rows: OutlineRow[] = [];
+	const groups = new Map<string, { kind: 'group'; phrase: string; entries: OutlineEntry[] }>();
+	for (const entry of entries) {
+		const key = keyOf(entry);
+		if (key === '' || counts.get(key)! < 2) {
+			rows.push({ kind: 'entry', entry });
+			continue;
+		}
+		const group = groups.get(key);
+		if (group) {
+			group.entries.push(entry);
+			continue;
+		}
+		const created = { kind: 'group' as const, phrase: reactionPhrase(entry.reaction.trim()), entries: [entry] };
+		groups.set(key, created);
+		rows.push(created);
+	}
+	return rows;
 }

@@ -2,7 +2,17 @@ import { useLayoutEffect, useRef, type MouseEvent, type ReactNode } from 'react'
 
 const FIRST_FIELD = 'input:not([type="hidden"]):not(:disabled), textarea:not(:disabled), select:not(:disabled)';
 
-export function Dialog({ label, onClose, children }: { label: string; onClose: () => void; children: ReactNode }) {
+export function Dialog({
+	label,
+	onClose,
+	children,
+	wide = false,
+}: {
+	label: string;
+	onClose: () => void;
+	children: ReactNode;
+	wide?: boolean;
+}) {
 	const ref = useRef<HTMLDialogElement>(null);
 	const closeRef = useRef(onClose);
 	closeRef.current = onClose;
@@ -14,7 +24,7 @@ export function Dialog({ label, onClose, children }: { label: string; onClose: (
 		if (!dialog) return;
 		const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 		dialog.showModal();
-		dialog.querySelector<HTMLElement>(FIRST_FIELD)?.focus();
+		(dialog.querySelector<HTMLElement>('[data-autofocus]') ?? dialog.querySelector<HTMLElement>(FIRST_FIELD))?.focus();
 		const onCancel = (e: Event) => {
 			e.preventDefault();
 			closeRef.current();
@@ -46,7 +56,7 @@ export function Dialog({ label, onClose, children }: { label: string; onClose: (
 	}
 
 	return (
-		<dialog ref={ref} className="dialog" aria-label={label} onMouseDown={onMouseDown} onClick={onClick}>
+		<dialog ref={ref} className={wide ? 'dialog wide' : 'dialog'} aria-label={label} onMouseDown={onMouseDown} onClick={onClick}>
 			{children}
 		</dialog>
 	);

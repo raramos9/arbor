@@ -1,0 +1,132 @@
+import { useState, type FormEvent } from 'react';
+import { POSITIONS, type Position, type PositionId } from '../model/positions';
+import { createStrategy, RulesetSchema, SideSchema, type Ruleset, type Side } from '../model/strategy';
+import { editorHref, navigate } from '../route';
+import { saveStrategy } from '../storage';
+import { Dialog } from './Dialog';
+
+const OTHER = 'other';
+
+const SIDE_LABEL: Record<Side, string> = { top: 'Top', bottom: 'Bottom', standing: 'Standing' };
+const RULESET_LABEL: Record<Ruleset, string> = { gi: 'Gi', 'no-gi': 'No-gi', both: 'Both' };
+
+export function NewStrategyDialog({ initial, onClose }: { initial: PositionId; onClose: () => void }) {
+	const [choice, setChoice] = useState<PositionId | typeof OTHER>(initial);
+	const [otherName, setOtherName] = useState('');
+	const [side, setSide] = useState<Side>(initial === 'standing' ? 'standing' : 'bottom');
+	const [ruleset, setRuleset] = useState<Ruleset>('both');
+	const [title, setTitle] = useState('');
+	const [error, setError] = useState<string | null>(null);
+
+	const position: Position | null =
+		choice === OTHER
+			? otherName.trim() === ''
+				? null
+				: { kind: 'other', name: otherName.trim() }
+			: { kind: 'listed', id: choice };
+	const valid = title.trim() !== '' && position !== null;
+
+	function onSubmit(e: FormEvent) {
+		e.preventDefault();
+		if (!valid || !position) return;
+		const doc = createStrategy({ title: title.trim(), position, ruleset, startingSide: side });
+		const saved = saveStrategy(doc);
+		if (!saved.ok) {
+			setError(saved.error);
+			return;
+		}
+		onClose();
+		navigate(editorHref(doc.id));
+	}
+
+	return (
+		<Dialog label="New strategy" onClose={onClose} wide>
+			<form className="form new-strategy" onSubmit={onSubmit}>
+				<h2>New strategy</h2>
+				<fieldset className="choice">
+					<legend>Where does it start?</legend>
+					<div className="chips">
+						{POSITIONS.map((p) => (
+							<label key={p.id} className="chip">
+								<input
+									type="radio"
+									name="position"
+									value={p.id}
+									checked={choice === p.id}
+									onChange={() => setChoice(p.id)}
+									data-autofocus={choice === p.id ? '' : undefined}
+								/>
+								<span>{p.name}</span>
+							</label>
+						))}
+						<label className="chip">
+							<input
+								type="radio"
+								name="position"
+								value={OTHER}
+								checked={choice === OTHER}
+								onChange={() => setChoice(OTHER)}
+							/>
+							<span>Other…</span>
+						</label>
+					</div>
+					{choice === OTHER && (
+						<label>
+							Position name
+							<input value={otherName} maxLength={60} autoFocus onChange={(e) => setOtherName(e.target.value)} />
+						</label>
+					)}
+				</fieldset>
+				<div className="choice-row">
+					<fieldset className="choice">
+						<legend>You start</legend>
+						<div className="segmented">
+							{SideSchema.options.map((option) => (
+								<label key={option}>
+									<input
+										type="radio"
+										name="side"
+										value={option}
+										checked={side === option}
+										onChange={() => setSide(option)}
+									/>
+									<span>{SIDE_LABEL[option]}</span>
+								</label>
+							))}
+						</div>
+					</fieldset>
+					<fieldset className="choice">
+						<legend>Ruleset</legend>
+						<div className="segmented">
+							{RulesetSchema.options.map((option) => (
+								<label key={option}>
+									<input
+										type="radio"
+										name="ruleset"
+										value={option}
+										checked={ruleset === option}
+										onChange={() => setRuleset(option)}
+									/>
+									<span>{RULESET_LABEL[option]}</span>
+								</label>
+							))}
+						</div>
+					</fieldset>
+				</div>
+				<label>
+					Title
+					<input value={title} onChange={(e) => setTitle(e.target.value)} />
+				</label>
+				{error && <p className="error">{error}</p>}
+				<div className="row">
+					<button type="button" onClick={onClose}>
+						Cancel
+					</button>
+					<button type="submit" className="primary" disabled={!valid}>
+						Create strategy
+					</button>
+				</div>
+			</form>
+		</Dialog>
+	);
+}

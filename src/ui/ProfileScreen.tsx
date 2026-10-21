@@ -3,6 +3,7 @@ import type { UserId } from '../model/publishing';
 import type { Handle } from '../model/strategy';
 import { findProfile } from '../publishing';
 import { cloud } from '../supabase';
+import { AppHeader } from './AppHeader';
 import { PublishedFeed } from './PublishedFeed';
 
 type ProfileState =
@@ -39,11 +40,7 @@ export function ProfileScreen({ handle }: { handle: string }) {
 		};
 	}, [handle]);
 
-	const back = (
-		<header className="header">
-			<a href="#/">Strategies</a>
-		</header>
-	);
+	const back = <AppHeader current={null} />;
 
 	switch (state.kind) {
 		case 'loading':
@@ -87,11 +84,14 @@ export function ProfileScreen({ handle }: { handle: string }) {
 		case 'ready':
 			return (
 				<div className="page">
-					<header className="header">
-						<a href="#/">Strategies</a>
-						<h1>@{state.profile.handle}</h1>
-					</header>
-					<main className="feed">
+					{back}
+					<main className="shelf-page">
+						<div className="page-head">
+							<div className="page-title">
+								<h1>@{state.profile.handle}</h1>
+								<p className="muted">Published strategies, grouped by where they start.</p>
+							</div>
+						</div>
 						<PublishedFeed owner={state.profile.id} />
 					</main>
 				</div>
