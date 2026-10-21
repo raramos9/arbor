@@ -33,3 +33,10 @@ export function positionName(position: Position): string {
 	if (position.kind === 'other') return position.name;
 	return POSITIONS.find((p) => p.id === position.id)?.name ?? position.id;
 }
+
+export function canonicalPosition(position: Position): Position {
+	if (position.kind === 'listed') return position;
+	const typed = position.name.trim().toLowerCase();
+	const listed = POSITIONS.find((p) => p.name.toLowerCase() === typed);
+	return listed ? { kind: 'listed', id: listed.id } : position;
+}
