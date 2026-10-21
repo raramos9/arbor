@@ -98,32 +98,59 @@ type PreviewItem =
 	| { kind: 'entry'; entry: OutlineEntry; depth: number; grouped: boolean }
 	| { kind: 'group'; phrase: string; entries: OutlineEntry[]; depth: number };
 
+type PreviewNode = { line: PreviewLine; children: PreviewNode[] };
+
+// Breadth first picks which lines fit, so one outcome's descendants cannot crowd out its siblings.
+// Depth first then prints them, and a line is only picked after its parent, so no line is orphaned.
 // A grouped outcome carries no phrase of its own: the group line above it already says the reaction.
 export function previewLines(outline: Outline, limit: number): { lines: PreviewLine[]; more: number } {
-	const lines: PreviewLine[] = [];
-	let total = 0;
 	const childItems = (entries: readonly OutlineEntry[], depth: number): PreviewItem[] =>
 		groupSameReaction(entries).map((row) =>
 			row.kind === 'entry'
 				? { kind: 'entry', entry: row.entry, depth, grouped: false }
 				: { kind: 'group', phrase: row.phrase, entries: row.entries, depth },
 		);
-	const stack = childItems(outline.start.next, 0).reverse();
-	for (let item = stack.pop(); item; item = stack.pop()) {
-		total += 1;
-		if (item.kind === 'group') {
-			if (lines.length < limit) lines.push({ depth: item.depth, phrase: item.phrase, options: item.entries.length });
-			for (let i = item.entries.length - 1; i >= 0; i--) {
-				stack.push({ kind: 'entry', entry: item.entries[i]!, depth: item.depth + 1, grouped: true });
-			}
-			continue;
-		}
+	const lineOf = (item: PreviewItem): PreviewLine => {
+		if (item.kind === 'group') return { depth: item.depth, phrase: item.phrase, options: item.entries.length };
 		const { entry, depth, grouped } = item;
-		if (lines.length < limit) {
-			const jump = entry.kind === 'jump' ? (entry.back ? 'back' : 'above') : null;
-			lines.push({ depth, phrase: grouped ? '' : reactionPhrase(entry.reaction), name: entry.name, jump });
+		const jump = entry.kind === 'jump' ? (entry.back ? 'back' : 'above') : null;
+		return { depth, phrase: grouped ? '' : reactionPhrase(entry.reaction), name: entry.name, jump };
+	};
+	const work: { node: PreviewNode; item: PreviewItem }[] = [];
+	const grow = (items: PreviewItem[], into: PreviewNode[]) => {
+		for (const item of items) {
+			const node = { line: lineOf(item), children: [] };
+			into.push(node);
+			work.push({ node, item });
 		}
-		if (entry.kind === 'step') stack.push(...childItems(entry.next, depth + 1).reverse());
+	};
+
+	const roots: PreviewNode[] = [];
+	grow(childItems(outline.start.next, 0), roots);
+	let total = 0;
+	for (let next = work.pop(); next; next = work.pop()) {
+		total += 1;
+		const { node, item } = next;
+		if (item.kind === 'group') {
+			grow(item.entries.map((entry) => ({ kind: 'entry', entry, depth: item.depth + 1, grouped: true })), node.children);
+		} else if (item.entry.kind === 'step') {
+			grow(childItems(item.entry.next, item.depth + 1), node.children);
+		}
+	}
+
+	const picked = new Set<PreviewNode>();
+	const queue = [...roots];
+	for (let head = 0; head < queue.length && picked.size < limit; head++) {
+		picked.add(queue[head]!);
+		queue.push(...queue[head]!.children);
+	}
+
+	const lines: PreviewLine[] = [];
+	const stack = roots.slice().reverse();
+	for (let node = stack.pop(); node; node = stack.pop()) {
+		if (!picked.has(node)) continue;
+		lines.push(node.line);
+		for (let i = node.children.length - 1; i >= 0; i--) stack.push(node.children[i]!);
 	}
 	return { lines, more: total - lines.length };
 }

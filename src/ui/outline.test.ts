@@ -203,6 +203,43 @@ describe('previewLines', () => {
 		expect(previewLines(toOutline(doc), 2).more).toBe(3);
 	});
 
+	it('spends the budget across a group of outcomes before any outcome descendants', () => {
+		const doc = graph(
+			['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+			[['a', 'b', 'posts'], ['b', 'e'], ['e', 'f'], ['a', 'c', 'posts'], ['a', 'd', 'posts'], ['f', 'g']],
+		);
+		const preview = previewLines(toOutline(doc), 4);
+		expect(preview.lines).toEqual([
+			{ depth: 0, phrase: 'if posts', options: 3 },
+			{ depth: 1, phrase: '', name: 'B', jump: null },
+			{ depth: 1, phrase: '', name: 'C', jump: null },
+			{ depth: 1, phrase: '', name: 'D', jump: null },
+		]);
+		expect(preview.more).toBe(3);
+	});
+
+	it('keeps a linear chain in the same order at any limit', () => {
+		const doc = graph(['a', 'b', 'c', 'd'], [['a', 'b'], ['b', 'c'], ['c', 'd']]);
+		expect(previewLines(toOutline(doc), 2).lines.map((line) => 'name' in line && line.name)).toEqual(['B', 'C']);
+		expect(previewLines(toOutline(doc), 10).lines.map((line) => line.depth)).toEqual([0, 1, 2]);
+	});
+
+	it('never shows a line before its parent', () => {
+		const doc = graph(
+			['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+			[['a', 'b', 'x'], ['b', 'e'], ['e', 'f'], ['a', 'c', 'y'], ['c', 'g'], ['a', 'd', 'z']],
+		);
+		for (let limit = 0; limit <= 7; limit++) {
+			const { lines } = previewLines(toOutline(doc), limit);
+			expect(lines).toHaveLength(Math.min(limit, 6));
+			let prev = -1;
+			for (const line of lines) {
+				expect(line.depth).toBeLessThanOrEqual(prev + 1);
+				prev = line.depth;
+			}
+		}
+	});
+
 	it('handles a chain longer than the call stack', () => {
 		const names = Array.from({ length: 20000 }, (_, i) => `n${i}`);
 		const doc = graph(names, names.slice(1).map((name, i): [string, string] => [names[i]!, name]));
