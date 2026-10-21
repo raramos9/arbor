@@ -3,7 +3,7 @@ import { Background, Controls, ReactFlow, type Connection, type EdgeChange, type
 import { reactionGroup, type StrategyDoc } from '../model/strategy';
 import { toFlowEdges, toFlowNodes, type Point, type Selection, type Size, type StrategyFlowNode } from './flow';
 import { InlineEditContext, noInlineEdit, type EditTarget } from './InlineEdit';
-import { SelectEdgeContext, SelectReactionContext, StrategyEdgeView } from './StrategyEdgeView';
+import { SelectReactionContext, StrategyEdgeView } from './StrategyEdgeView';
 import { StrategyNodeView } from './StrategyNodeView';
 
 const nodeTypes = { strategy: StrategyNodeView };
@@ -93,8 +93,7 @@ export function StrategyCanvas({ doc, selection, onSelect, access }: Props) {
 			: noInlineEdit;
 
 	return (
-		<SelectEdgeContext.Provider value={selectEdge}>
-			<SelectReactionContext.Provider value={selectReaction}>
+		<SelectReactionContext.Provider value={selectReaction}>
 			<InlineEditContext.Provider value={inlineEdit}>
 				<ReactFlow
 					nodes={nodes}
@@ -123,7 +122,6 @@ export function StrategyCanvas({ doc, selection, onSelect, access }: Props) {
 					<Controls showInteractive={false} />
 				</ReactFlow>
 			</InlineEditContext.Provider>
-			</SelectReactionContext.Provider>
-		</SelectEdgeContext.Provider>
+		</SelectReactionContext.Provider>
 	);
 }
