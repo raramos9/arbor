@@ -26,6 +26,7 @@ import {
 	type StrategyFlowNode,
 } from './flow';
 import { BackLink } from './BackLink';
+import type { EditTarget } from './InlineEdit';
 import { Inspector } from './Inspector';
 import { OutlinePane } from './OutlinePane';
 import { entrySelection, type OutlineEntry } from './outline';
@@ -73,6 +74,11 @@ function isEditable(target: EventTarget | null): boolean {
 	return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
 }
 
+function isActivatable(target: EventTarget | null): boolean {
+	if (!(target instanceof Element)) return false;
+	return target.closest('button, a, summary') !== null && target.closest('.react-flow__node, .react-flow__edge') === null;
+}
+
 function deletedName(doc: StrategyDoc, cmd: Command): string | null {
 	if (cmd.type === 'deleteNode') return `“${doc.nodes[cmd.id]?.name || 'Untitled'}”`;
 	if (cmd.type === 'deleteEdge') {
@@ -94,7 +100,7 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 	const { revealAt, revealNode } = useRevealNode(canvasRef);
 	const [selection, setSelection] = useState<Selection>(null);
 	const [error, setError] = useState<string | null>(null);
-	const [focusField, setFocusField] = useState(false);
+	const [editing, setEditing] = useState<Selection>(null);
 	const [exporting, setExporting] = useState(false);
 	const [exportError, setExportError] = useState<string | null>(null);
 	const [notice, setNotice] = useState<string | null>(null);
@@ -111,6 +117,7 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 		if ((direction === 'undo' ? undo : redo)()) {
 			setNotice(null);
 			setError(null);
+			setEditing(null);
 		}
 	}
 
@@ -126,6 +133,12 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 		if (!exists) setSelection(null);
 	}, [doc, selection]);
 
+	useEffect(() => {
+		if (!editing) return;
+		const exists = editing.type === 'node' ? doc.nodes[editing.id] : doc.edges[editing.id];
+		if (!exists) setEditing(null);
+	}, [doc, editing]);
+
 	async function onExport() {
 		setExporting(true);
 		setExportError(null);
@@ -140,7 +153,6 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 
 	function select(next: Selection) {
 		setSelection(next);
-		setFocusField(false);
 		setError(null);
 	}
 
@@ -153,8 +165,30 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 		if (exec(cmd).ok) select(null);
 	}
 
-	const keys = useRef({ deleteSelection, step });
-	keys.current = { deleteSelection, step };
+	function startEdit(target: EditTarget) {
+		setSelection(target);
+		setEditing(target);
+	}
+
+	function commitEdit(target: EditTarget, text: string) {
+		if (target.type === 'node') {
+			const node = doc.nodes[target.id];
+			if (node && node.name !== text) exec({ type: 'updateNode', id: target.id, patch: { name: text } });
+		} else {
+			const edge = doc.edges[target.id];
+			if (edge && edge.label !== text.trim()) exec({ type: 'updateEdge', id: target.id, patch: { label: text } });
+		}
+		setEditing(null);
+	}
+
+	function startEditingSelection(): boolean {
+		if (!selection) return false;
+		startEdit(selection);
+		return true;
+	}
+
+	const keys = useRef({ deleteSelection, step, startEditingSelection });
+	keys.current = { deleteSelection, step, startEditingSelection };
 
 	useEffect(() => {
 		const onKey = (e: KeyboardEvent) => {
@@ -163,6 +197,10 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 			if ((e.metaKey || e.ctrlKey) && !e.altKey && (key === 'z' || key === 'y')) {
 				e.preventDefault();
 				keys.current.step(key === 'y' || e.shiftKey ? 'redo' : 'undo');
+				return;
+			}
+			if (e.key === 'F2' || (e.key === 'Enter' && !e.metaKey && !e.ctrlKey && !e.altKey && !isActivatable(e.target))) {
+				if (keys.current.startEditingSelection()) e.preventDefault();
 				return;
 			}
 			if (e.key !== 'Delete' && e.key !== 'Backspace') return;
@@ -190,8 +228,7 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 		const nodeId = newNodeId();
 		const result = exec(create(nodeId, at));
 		if (result.ok) {
-			setSelection({ type: 'node', id: nodeId });
-			setFocusField(true);
+			startEdit({ type: 'node', id: nodeId });
 			revealAt(at);
 		}
 	}
@@ -214,8 +251,7 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 		const edge = newEdgeId();
 		const result = exec({ type: 'addReaction', from, edge, node: newNodeId(), at });
 		if (!result.ok) return;
-		setSelection({ type: 'edge', id: edge });
-		setFocusField(true);
+		startEdit({ type: 'edge', id: edge });
 		revealAt(at);
 	}
 
@@ -236,8 +272,7 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 		const edgeId = newEdgeId();
 		const result = exec({ type: 'connect', id: edgeId, from: from.id, to: to.id, label: '' });
 		if (!result.ok) return;
-		setSelection({ type: 'edge', id: edgeId });
-		setFocusField(true);
+		startEdit({ type: 'edge', id: edgeId });
 	}
 
 	const isBlank = Object.keys(doc.nodes).length === 1 && Object.keys(doc.edges).length === 0;
@@ -312,14 +347,23 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 						doc={doc}
 						selection={selection}
 						onSelect={select}
-						access={{ mode: 'edit', onMove, onMoveEnd: persist, onConnect }}
+						access={{
+							mode: 'edit',
+							onMove,
+							onMoveEnd: persist,
+							onConnect,
+							editing,
+							onStartEdit: startEdit,
+							onCommitEdit: commitEdit,
+							onCancelEdit: () => setEditing(null),
+						}}
 					/>
 				</div>
 				<Inspector
 					doc={doc}
 					selection={selection}
 					error={error}
-					access={{ mode: 'edit', exec, onDeleted: () => select(null), focusField, onAddReaction: addReaction }}
+					access={{ mode: 'edit', exec, onDeleted: () => select(null), onAddReaction: addReaction }}
 				/>
 			</div>
 		</div>

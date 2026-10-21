@@ -11,7 +11,6 @@ type InspectorAccess =
 			mode: 'edit';
 			exec: (cmd: Command) => ApplyResult;
 			onDeleted: () => void;
-			focusField: boolean;
 			onAddReaction: () => void;
 	  }
 	| { mode: 'view' };
@@ -90,11 +89,10 @@ type EditProps = Target & {
 	error: string | null;
 	exec: (cmd: Command) => ApplyResult;
 	onDeleted: () => void;
-	focusField: boolean;
 	onAddReaction: () => void;
 };
 
-function EditInspector({ doc, node, edge, error, exec, onDeleted, focusField, onAddReaction }: EditProps) {
+function EditInspector({ doc, node, edge, error, exec, onDeleted, onAddReaction }: EditProps) {
 	function remove(cmd: Command) {
 		if (exec(cmd).ok) onDeleted();
 	}
@@ -107,7 +105,6 @@ function EditInspector({ doc, node, edge, error, exec, onDeleted, focusField, on
 					<Field
 						label="Name"
 						value={node.name}
-						autoFocus={focusField}
 						onChange={(name) => exec({ type: 'updateNode', id: node.id, patch: { name } })}
 					/>
 					<Field
@@ -136,7 +133,6 @@ function EditInspector({ doc, node, edge, error, exec, onDeleted, focusField, on
 						label="Reaction"
 						placeholder="How your opponent reacts"
 						value={edge.label}
-						autoFocus={focusField}
 						onChange={(label) => exec({ type: 'updateEdge', id: edge.id, patch: { label } })}
 					/>
 					<Field

@@ -40,7 +40,7 @@ describe('occupiedRects', () => {
 		id,
 		type: 'strategy',
 		position: { x: 0, y },
-		data: { name: id, isRoot: false, isEnd: false, mediaCount: 0 },
+		data: { name: id, isRoot: false, isEnd: false, mediaCount: 0, editing: false },
 	});
 	const nodes = [node('a', 0), node('b', 300)];
 	const edge = (label: string, mediaCount = 0): StrategyFlowEdge => ({
@@ -48,7 +48,7 @@ describe('occupiedRects', () => {
 		type: 'strategy',
 		source: 'a',
 		target: 'b',
-		data: { label, mediaCount },
+		data: { label, mediaCount, editing: false },
 	});
 
 	it('keeps a new node below a connected node off the label', () => {
@@ -98,26 +98,36 @@ describe('toFlowEdges', () => {
 	it('carries the reaction and clip count as edge data', () => {
 		const doc = armDragDoc();
 		doc.edges['e2'] = { ...doc.edges['e2']!, media: [clip, clip] };
-		const edges = toFlowEdges(doc, null);
+		const edges = toFlowEdges(doc, null, null);
 		expect(edges.map((edge) => edge.data)).toEqual([
-			{ label: '', mediaCount: 0 },
-			{ label: 'Arm stays displaced', mediaCount: 2 },
-			{ label: 'Arm wraps around my back', mediaCount: 0 },
+			{ label: '', mediaCount: 0, editing: false },
+			{ label: 'Arm stays displaced', mediaCount: 2, editing: false },
+			{ label: 'Arm wraps around my back', mediaCount: 0, editing: false },
 		]);
 		expect(edges.every((edge) => edge.type === 'strategy' && edge.label === undefined)).toBe(true);
 	});
 
 	it('marks only the selected edge', () => {
 		const doc = armDragDoc();
-		const edges = toFlowEdges(doc, { type: 'edge', id: EdgeIdSchema.parse('e2') });
+		const edges = toFlowEdges(doc, { type: 'edge', id: EdgeIdSchema.parse('e2') }, null);
 		expect(edges.map((edge) => edge.selected)).toEqual([false, true, false]);
 		expect(edges[1]!.ariaLabel).toBe(edgeAriaLabel(doc, doc.edges['e2']!));
+	});
+
+	it('marks only the edge being edited', () => {
+		const edges = toFlowEdges(armDragDoc(), null, { type: 'edge', id: EdgeIdSchema.parse('e2') });
+		expect(edges.map((edge) => edge.data?.editing)).toEqual([false, true, false]);
 	});
 });
 
 describe('toFlowNodes', () => {
+	it('marks only the node being edited', () => {
+		const nodes = toFlowNodes(armDragDoc(), null, { type: 'node', id: NodeIdSchema.parse('arm-drag') }, {});
+		expect(nodes.map((node) => node.data.editing)).toEqual([false, true, false, false]);
+	});
+
 	it('flags nodes with no outgoing connection as line ends', () => {
-		const nodes = toFlowNodes(armDragDoc(), null, {});
+		const nodes = toFlowNodes(armDragDoc(), null, null, {});
 		expect(nodes.map((node) => [node.id, node.data.isEnd])).toEqual([
 			['open-guard', false],
 			['arm-drag', false],

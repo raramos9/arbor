@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Background, Controls, ReactFlow, type Connection, type EdgeChange, type NodeChange } from '@xyflow/react';
 import type { StrategyDoc } from '../model/strategy';
 import { toFlowEdges, toFlowNodes, type Point, type Selection, type Size, type StrategyFlowNode } from './flow';
+import { InlineEditContext, noInlineEdit, type EditTarget } from './InlineEdit';
 import { SelectEdgeContext, StrategyEdgeView } from './StrategyEdgeView';
 import { StrategyNodeView } from './StrategyNodeView';
 
@@ -14,6 +15,10 @@ type CanvasAccess =
 			onMove: (id: string, at: Point) => void;
 			onMoveEnd: () => void;
 			onConnect: (connection: Connection) => void;
+			editing: Selection;
+			onStartEdit: (target: EditTarget) => void;
+			onCommitEdit: (target: EditTarget, text: string) => void;
+			onCancelEdit: () => void;
 	  }
 	| { mode: 'view' };
 
@@ -26,9 +31,10 @@ type Props = {
 
 export function StrategyCanvas({ doc, selection, onSelect, access }: Props) {
 	const [measured, setMeasured] = useState<Record<string, Size>>({});
-	const nodes = useMemo(() => toFlowNodes(doc, selection, measured), [doc, selection, measured]);
-	const edges = useMemo(() => toFlowEdges(doc, selection), [doc, selection]);
-	const editing = access.mode === 'edit';
+	const editing = access.mode === 'edit' ? access.editing : null;
+	const nodes = useMemo(() => toFlowNodes(doc, selection, editing, measured), [doc, selection, editing, measured]);
+	const edges = useMemo(() => toFlowEdges(doc, selection, editing), [doc, selection, editing]);
+	const editable = access.mode === 'edit';
 
 	function selectNode(id: string) {
 		const target = doc.nodes[id];
@@ -38,6 +44,16 @@ export function StrategyCanvas({ doc, selection, onSelect, access }: Props) {
 	function selectEdge(id: string) {
 		const target = doc.edges[id];
 		if (target) onSelect({ type: 'edge', id: target.id });
+	}
+
+	function startNodeEdit(id: string) {
+		const target = doc.nodes[id];
+		if (target && access.mode === 'edit') access.onStartEdit({ type: 'node', id: target.id });
+	}
+
+	function startEdgeEdit(id: string) {
+		const target = doc.edges[id];
+		if (target && access.mode === 'edit') access.onStartEdit({ type: 'edge', id: target.id });
 	}
 
 	// Enter or Space on a focused node or edge reaches us as a select change, not a click.
@@ -65,8 +81,14 @@ export function StrategyCanvas({ doc, selection, onSelect, access }: Props) {
 		}
 	}
 
+	const inlineEdit =
+		access.mode === 'edit'
+			? { start: access.onStartEdit, commit: access.onCommitEdit, cancel: access.onCancelEdit }
+			: noInlineEdit;
+
 	return (
 		<SelectEdgeContext.Provider value={selectEdge}>
+			<InlineEditContext.Provider value={inlineEdit}>
 			<ReactFlow
 				nodes={nodes}
 				edges={edges}
@@ -76,12 +98,15 @@ export function StrategyCanvas({ doc, selection, onSelect, access }: Props) {
 				onEdgesChange={onEdgesChange}
 				onConnect={access.mode === 'edit' ? access.onConnect : undefined}
 				onNodeClick={(_, node) => selectNode(node.id)}
-				onNodeDragStart={editing ? (_, node) => selectNode(node.id) : undefined}
+				onNodeDragStart={editable ? (_, node) => selectNode(node.id) : undefined}
+				onNodeDoubleClick={editable ? (_, node) => startNodeEdit(node.id) : undefined}
+				onEdgeDoubleClick={editable ? (_, edge) => startEdgeEdit(edge.id) : undefined}
 				onEdgeClick={(_, edge) => selectEdge(edge.id)}
 				onPaneClick={() => onSelect(null)}
-				nodesDraggable={editing}
-				nodesConnectable={editing}
-				edgesReconnectable={editing}
+				nodesDraggable={editable}
+				nodesConnectable={editable}
+				edgesReconnectable={editable}
+				zoomOnDoubleClick={false}
 				deleteKeyCode={null}
 				panActivationKeyCode={null}
 				fitView
@@ -89,6 +114,7 @@ export function StrategyCanvas({ doc, selection, onSelect, access }: Props) {
 				<Background />
 				<Controls showInteractive={false} />
 			</ReactFlow>
+			</InlineEditContext.Provider>
 		</SelectEdgeContext.Provider>
 	);
 }
