@@ -1,4 +1,4 @@
-import { canonicalPosition, positionName, type Position } from '../model/positions';
+import { canonicalPosition, startLabel, type Position } from '../model/positions';
 import type { PublishedSummary } from '../model/publishing';
 import type { Side } from '../model/strategy';
 
@@ -10,9 +10,7 @@ function positionKey(position: Position | null): string {
 }
 
 function heading(position: Position | null, side: Side): string {
-	if (!position) return `No starting position · ${side}`;
-	if (position.kind === 'listed' && position.id === 'standing' && side === 'standing') return 'Standing';
-	return `${positionName(position)} · ${side}`;
+	return position ? startLabel(position, side) : `No starting position · ${side}`;
 }
 
 export function groupByStart(items: readonly PublishedSummary[]): FeedGroup[] {
