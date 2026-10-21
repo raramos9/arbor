@@ -53,4 +53,13 @@ describe('groupByStart', () => {
 	it('returns nothing for no items', () => {
 		expect(groupByStart([])).toEqual([]);
 	});
+
+	it('files an Other name that matches a listed position under the listed group', () => {
+		const listed = summary({ kind: 'listed', id: 'standing' }, 'standing');
+		const typed = summary({ kind: 'other', name: ' standing' }, 'standing');
+		const guard = summary({ kind: 'other', name: 'CLOSED GUARD' }, 'bottom');
+		const groups = groupByStart([typed, listed, guard]);
+		expect(groups.map((g) => g.heading)).toEqual(['Standing', 'Closed guard · bottom']);
+		expect(groups[0]?.items).toEqual([typed, listed]);
+	});
 });
