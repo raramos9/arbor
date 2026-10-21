@@ -36,7 +36,6 @@ export function MiniTreeView({ tree }: { tree: MiniTree }) {
 					<circle key={index} className={`mt-${dot.kind}`} cx={px(dot.x)} cy={py(dot.y)} r={RADIUS[dot.kind]} />
 				))}
 			</svg>
-			{tree.clipped && tree.hidden > 0 && <span className="thumb-more">+{tree.hidden}</span>}
 		</div>
 	);
 }

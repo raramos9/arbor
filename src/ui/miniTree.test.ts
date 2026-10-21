@@ -32,7 +32,6 @@ describe('miniTree', () => {
 			columns: 1,
 			rows: 1,
 			clipped: false,
-			hidden: 0,
 		});
 	});
 
@@ -53,7 +52,6 @@ describe('miniTree', () => {
 	it('forks outcomes that share a reaction from one point', () => {
 		const doc = graph(['a', 'b', 'c', 'd'], [['a', 'b', 'posts arm out'], ['a', 'c', 'posts arm out'], ['a', 'd', 'he sits back']]);
 		const tree = miniTree(toOutline(doc));
-		expect(tree.hidden).toBe(0);
 		expect(tree.dots).toContainEqual({ x: 0.5, y: 0.5, kind: 'fork' });
 		expect(tree.links).toContainEqual({ x1: 0.5, y1: 0.5, x2: 1, y2: 0, reaction: true });
 		expect(tree.links).toContainEqual({ x1: 0.5, y1: 0.5, x2: 1, y2: 1, reaction: true });
@@ -75,14 +73,12 @@ describe('miniTree', () => {
 		expect(tree.rows).toBe(2);
 		expect(tree.dots).toHaveLength(3);
 		expect(tree.clipped).toBe(true);
-		expect(tree.hidden).toBe(2);
 
 		const deep = graph(['a', 'b', 'c'], [['a', 'b'], ['b', 'c']]);
 		const shallow = miniTree(toOutline(deep), { depth: 2, rows: 7 });
 		expect(shallow.columns).toBe(2);
 		expect(shallow.dots).toContainEqual({ x: 1, y: 0, kind: 'step' });
 		expect(shallow.clipped).toBe(true);
-		expect(shallow.hidden).toBe(1);
 	});
 });
 
