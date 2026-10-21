@@ -1,10 +1,12 @@
-import type { StrategyDoc } from '../model/strategy';
-import { groupSameReaction, type Outline, type OutlineEntry } from './outline';
+import type { Ruleset, StrategyDoc } from '../model/strategy';
+import { groupSameReaction, type Outline, type OutlineEntry, type OutlineStep } from './outline';
+
+export const RULESET_LABEL: Record<Ruleset, string> = { gi: 'Gi', 'no-gi': 'No-gi', both: 'Gi + no-gi' };
 
 export type TreeDotKind = 'start' | 'step' | 'end' | 'jump' | 'fork';
 export type TreeDot = { x: number; y: number; kind: TreeDotKind };
 export type TreeLink = { x1: number; y1: number; x2: number; y2: number; reaction: boolean };
-export type MiniTree = { dots: TreeDot[]; links: TreeLink[]; columns: number; rows: number; clipped: boolean };
+export type MiniTree = { dots: TreeDot[]; links: TreeLink[]; columns: number; rows: number; clipped: boolean; hidden: number };
 
 export const MINI_TREE_LIMITS = { depth: 7, rows: 7 };
 
@@ -57,7 +59,19 @@ export function miniTree(outline: Outline, limits = MINI_TREE_LIMITS): MiniTree 
 	}
 
 	place(outline.start, 0);
-	return { dots, links, columns, rows, clipped };
+	// Fork dots are junctions, not nodes.
+	const drawn = dots.filter((dot) => dot.kind !== 'fork').length;
+	return { dots, links, columns, rows, clipped, hidden: countEntries(outline.start) - drawn };
+}
+
+function countEntries(root: OutlineStep): number {
+	let total = 0;
+	const stack: OutlineEntry[] = [root];
+	for (let entry = stack.pop(); entry; entry = stack.pop()) {
+		total += 1;
+		if (entry.kind === 'step') stack.push(...entry.next);
+	}
+	return total;
 }
 
 export type StrategyStats = { steps: number; reactions: number; ends: number };
