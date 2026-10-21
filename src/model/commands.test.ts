@@ -61,6 +61,10 @@ describe('addReaction', () => {
 		expect(doc.edges[eid('new-edge')]).toMatchObject({ from: nid('triangle'), to: nid('new-node'), label: '' });
 		expect(doc.layout[nid('new-node')]).toEqual({ x: 10, y: 20 });
 	});
+	it('labels the connection when given a reaction', () => {
+		const doc = ok(armDragDoc(), { ...cmd, label: ' he stacks ' });
+		expect(doc.edges[eid('new-edge')]).toMatchObject({ from: nid('triangle'), label: 'he stacks' });
+	});
 	it('refuses an unknown source', () => {
 		refused(armDragDoc(), { ...cmd, from: nid('ghost') });
 	});
