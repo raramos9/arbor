@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { canonicalPosition, POSITIONS, positionName, sideAfterPositionChange, type Position, type PositionId } from '../model/positions';
-import { createStrategy, RulesetSchema, SideSchema, type Ruleset, type Side } from '../model/strategy';
+import { createStrategy, RulesetSchema, SideSchema, type Result, type Ruleset, type Side } from '../model/strategy';
 import { editorHref, navigate } from '../route';
 import { saveStrategy } from '../storage';
 import { Dialog } from './Dialog';
@@ -9,6 +9,14 @@ const OTHER = 'other';
 
 const SIDE_LABEL: Record<Side, string> = { top: 'Top', bottom: 'Bottom', standing: 'Standing' };
 const RULESET_LABEL: Record<Ruleset, string> = { gi: 'Gi', 'no-gi': 'No-gi', both: 'Both' };
+
+export function openNewStrategy(args: Parameters<typeof createStrategy>[0]): Result<null> {
+	const choice = args.position?.kind === 'listed' ? args.position.id : 'other';
+	const doc = createStrategy({ ...args, startingSide: sideAfterPositionChange(args.startingSide, choice) });
+	const saved = saveStrategy(doc);
+	if (saved.ok) navigate(editorHref(doc.id));
+	return saved;
+}
 
 export function NewStrategyDialog({ initial, onClose }: { initial: PositionId; onClose: () => void }) {
 	const [choice, setChoice] = useState<PositionId | typeof OTHER>(initial);
@@ -40,14 +48,9 @@ export function NewStrategyDialog({ initial, onClose }: { initial: PositionId; o
 	function onSubmit(e: FormEvent) {
 		e.preventDefault();
 		if (!valid || !position) return;
-		const doc = createStrategy({ title: title.trim(), position, ruleset, startingSide: startSide });
-		const saved = saveStrategy(doc);
-		if (!saved.ok) {
-			setError(saved.error);
-			return;
-		}
-		onClose();
-		navigate(editorHref(doc.id));
+		const opened = openNewStrategy({ title: title.trim(), position, ruleset, startingSide: startSide });
+		if (opened.ok) onClose();
+		else setError(opened.error);
 	}
 
 	return (
