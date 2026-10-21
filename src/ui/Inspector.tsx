@@ -1,6 +1,6 @@
 import type { ApplyResult, Command } from '../model/commands';
 import { positionName } from '../model/positions';
-import { RulesetSchema, SideSchema, type StrategyDoc } from '../model/strategy';
+import { RulesetSchema, SideSchema, type EdgeId, type StrategyDoc } from '../model/strategy';
 import { Field, ReadField, SelectField } from './Field';
 import type { Selection } from './flow';
 import { MediaList } from './MediaList';
@@ -12,6 +12,7 @@ type InspectorAccess =
 			exec: (cmd: Command) => ApplyResult;
 			onDeleted: () => void;
 			onAddReaction: () => void;
+			onAddOption: (edge: EdgeId) => void;
 	  }
 	| { mode: 'view' };
 
@@ -90,9 +91,10 @@ type EditProps = Target & {
 	exec: (cmd: Command) => ApplyResult;
 	onDeleted: () => void;
 	onAddReaction: () => void;
+	onAddOption: (edge: EdgeId) => void;
 };
 
-function EditInspector({ doc, node, edge, error, exec, onDeleted, onAddReaction }: EditProps) {
+function EditInspector({ doc, node, edge, error, exec, onDeleted, onAddReaction, onAddOption }: EditProps) {
 	function remove(cmd: Command) {
 		if (exec(cmd).ok) onDeleted();
 	}
@@ -148,6 +150,9 @@ function EditInspector({ doc, node, edge, error, exec, onDeleted, onAddReaction 
 						onChange={(notes) => exec({ type: 'updateEdge', id: edge.id, patch: { notes } })}
 					/>
 					<MediaList media={edge.media} access={{ mode: 'edit', owner: { type: 'edge', id: edge.id }, exec }} />
+					{edge.label !== '' && (
+						<button onClick={() => onAddOption(edge.id)}>+ Option for “{edge.label}”</button>
+					)}
 					<button className="danger" onClick={() => remove({ type: 'deleteEdge', id: edge.id })}>
 						Delete connection
 					</button>

@@ -7,6 +7,7 @@ import { startLabel } from '../model/positions';
 import {
 	newEdgeId,
 	newNodeId,
+	type EdgeId,
 	type NodeId,
 	type StrategyDoc,
 } from '../model/strategy';
@@ -239,6 +240,19 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 
 	function addReaction() {
 		const from = reactionSource(doc, selection);
+		const created = branchFrom(from, '');
+		if (created) startEdit({ type: 'edge', id: created.edge });
+	}
+
+	// Another outcome for the same reaction: a sibling connection from the same node, carrying the same words.
+	function addOption(edgeId: EdgeId) {
+		const edge = doc.edges[edgeId];
+		if (!edge) return;
+		const created = branchFrom(edge.from, edge.label);
+		if (created) startEdit({ type: 'node', id: created.node });
+	}
+
+	function branchFrom(from: NodeId, label: string): { edge: EdgeId; node: NodeId } | null {
 		const flowNode = getNodes().find((n) => n.id === from);
 		const origin = flowNode?.position ?? doc.layout[from] ?? { x: 0, y: 0 };
 		const source: Rect = {
@@ -249,10 +263,11 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 		const childCount = Object.values(doc.edges).filter((edge) => edge.from === from).length;
 		const at = reactionSpot(source, childCount, occupiedRects(getNodes(), getEdges()));
 		const edge = newEdgeId();
-		const result = exec({ type: 'addReaction', from, edge, node: newNodeId(), at });
-		if (!result.ok) return;
-		startEdit({ type: 'edge', id: edge });
+		const node = newNodeId();
+		const result = exec({ type: 'addReaction', from, edge, node, at, label });
+		if (!result.ok) return null;
 		revealAt(at);
+		return { edge, node };
 	}
 
 	function selectEntry(entry: OutlineEntry) {
@@ -363,7 +378,7 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 					doc={doc}
 					selection={selection}
 					error={error}
-					access={{ mode: 'edit', exec, onDeleted: () => select(null), onAddReaction: addReaction }}
+					access={{ mode: 'edit', exec, onDeleted: () => select(null), onAddReaction: addReaction, onAddOption: addOption }}
 				/>
 			</div>
 		</div>

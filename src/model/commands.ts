@@ -14,7 +14,14 @@ export type MediaOwner = { type: 'node'; id: NodeId } | { type: 'edge'; id: Edge
 
 export type Command =
 	| { type: 'addNode'; id: NodeId; name: string; at?: { x: number; y: number } }
-	| { type: 'addReaction'; from: NodeId; edge: EdgeId; node: NodeId; at: { x: number; y: number } }
+	| {
+			type: 'addReaction';
+			from: NodeId;
+			edge: EdgeId;
+			node: NodeId;
+			at: { x: number; y: number };
+			label?: string;
+	  }
 	| { type: 'updateNode'; id: NodeId; patch: { name?: string; notes?: string } }
 	| { type: 'deleteNode'; id: NodeId }
 	| {
@@ -101,7 +108,14 @@ export function apply(doc: StrategyDoc, cmd: Command): ApplyResult {
 			if (doc.edges[cmd.edge]) return refuse('An edge with that id already exists.');
 			if (doc.nodes[cmd.node]) return refuse('A node with that id already exists.');
 			const node: StrategyNode = { id: cmd.node, name: '', notes: '', media: [] };
-			const edge: StrategyEdge = { id: cmd.edge, from: cmd.from, to: cmd.node, label: '', notes: '', media: [] };
+			const edge: StrategyEdge = {
+				id: cmd.edge,
+				from: cmd.from,
+				to: cmd.node,
+				label: cmd.label?.trim() ?? '',
+				notes: '',
+				media: [],
+			};
 			const withChild = withNode(doc, node, cmd.at);
 			return { ok: true, doc: { ...withChild, edges: { ...withChild.edges, [cmd.edge]: edge } } };
 		}
