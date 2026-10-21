@@ -14,6 +14,7 @@ export function PositionField({ value, onChange, allowNone }: Props) {
 	// Other with no name yet reports null upward, so the choice and the text are kept here until a name exists.
 	const [otherChosen, setOtherChosen] = useState(false);
 	const [draft, setDraft] = useState<string | null>(null);
+	const [seenValue, setSeenValue] = useState(value);
 	const focusInput = useRef(false);
 	const input = useRef<HTMLInputElement>(null);
 
@@ -22,6 +23,12 @@ export function PositionField({ value, onChange, allowNone }: Props) {
 		focusInput.current = false;
 		input.current?.focus();
 	});
+
+	// Undo can move the doc to a named position while Other is still chosen here; the doc wins.
+	if (value !== seenValue) {
+		setSeenValue(value);
+		if (value !== null) setOtherChosen(false);
+	}
 
 	const isOther = otherChosen || value?.kind === 'other';
 	const selected = isOther ? OTHER : value ? value.id : NONE;
