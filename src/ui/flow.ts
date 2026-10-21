@@ -4,9 +4,15 @@ import type { EdgeId, NodeId } from '../model/strategy';
 
 export type Selection = { type: 'node'; id: NodeId } | { type: 'edge'; id: EdgeId } | null;
 
-export type StrategyNodeData = { name: string; isRoot: boolean; isEnd: boolean; mediaCount: number };
+export type StrategyNodeData = {
+	name: string;
+	isRoot: boolean;
+	isEnd: boolean;
+	mediaCount: number;
+	editing: boolean;
+};
 export type StrategyFlowNode = Node<StrategyNodeData, 'strategy'>;
-export type StrategyEdgeData = { label: string; mediaCount: number };
+export type StrategyEdgeData = { label: string; mediaCount: number; editing: boolean };
 export type StrategyFlowEdge = Edge<StrategyEdgeData, 'strategy'>;
 export type Size = { width: number; height: number };
 
@@ -42,6 +48,7 @@ export function edgeAriaLabel(doc: StrategyDoc, edge: StrategyEdge): string {
 export function toFlowNodes(
 	doc: StrategyDoc,
 	selection: Selection,
+	editing: Selection,
 	measured: Record<string, Size>,
 ): StrategyFlowNode[] {
 	const hasOutgoing = new Set(Object.values(doc.edges).map((edge) => edge.from));
@@ -59,6 +66,7 @@ export function toFlowNodes(
 				isRoot,
 				isEnd,
 				mediaCount: node.media.length,
+				editing: editing?.type === 'node' && editing.id === node.id,
 			},
 			selected: selection?.type === 'node' && selection.id === node.id,
 			...(size ? { measured: size } : {}),
@@ -66,13 +74,17 @@ export function toFlowNodes(
 	});
 }
 
-export function toFlowEdges(doc: StrategyDoc, selection: Selection): StrategyFlowEdge[] {
+export function toFlowEdges(doc: StrategyDoc, selection: Selection, editing: Selection): StrategyFlowEdge[] {
 	return Object.values(doc.edges).map((edge) => ({
 		id: edge.id,
 		type: 'strategy',
 		source: edge.from,
 		target: edge.to,
-		data: { label: edge.label, mediaCount: edge.media.length },
+		data: {
+			label: edge.label,
+			mediaCount: edge.media.length,
+			editing: editing?.type === 'edge' && editing.id === edge.id,
+		},
 		ariaLabel: edgeAriaLabel(doc, edge),
 		markerEnd: { type: MarkerType.ArrowClosed },
 		selected: selection?.type === 'edge' && selection.id === edge.id,

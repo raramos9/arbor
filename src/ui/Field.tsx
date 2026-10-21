@@ -5,11 +5,10 @@ type Props = {
 	value: string;
 	onChange: (value: string) => void;
 	multiline?: boolean;
-	autoFocus?: boolean;
 	placeholder?: string;
 };
 
-export function Field({ label, value, onChange, multiline, autoFocus, placeholder }: Props) {
+export function Field({ label, value, onChange, multiline, placeholder }: Props) {
 	// While focused the field shows what was typed; otherwise it follows the doc, so undo shows up.
 	const [draft, setDraft] = useState<string | null>(null);
 	const shared = {
@@ -26,12 +25,7 @@ export function Field({ label, value, onChange, multiline, autoFocus, placeholde
 			{multiline ? (
 				<textarea rows={6} placeholder={placeholder} {...shared} />
 			) : (
-				<input
-					{...shared}
-					placeholder={placeholder}
-					autoFocus={autoFocus}
-					onFocus={autoFocus ? (e) => e.target.select() : undefined}
-				/>
+				<input {...shared} placeholder={placeholder} />
 			)}
 		</label>
 	);
