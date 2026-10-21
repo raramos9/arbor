@@ -7,7 +7,7 @@ const PAD = 16;
 const MIN_WIDTH = 200;
 const MIN_HEIGHT = 88;
 
-const RADIUS: Record<TreeDotKind, number> = { start: 5, step: 4, end: 3.5, jump: 3.5 };
+const RADIUS: Record<TreeDotKind, number> = { start: 5, step: 4, end: 3.5, jump: 3.5, fork: 2.5 };
 
 const RULESET_LABEL: Record<Ruleset, string> = { gi: 'Gi', 'no-gi': 'No-gi', both: 'Gi + no-gi' };
 

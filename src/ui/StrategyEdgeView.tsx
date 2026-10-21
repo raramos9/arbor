@@ -1,7 +1,7 @@
-import { createContext, useContext } from 'react';
-import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from '@xyflow/react';
+import { createContext, useCallback, useContext } from 'react';
+import { BaseEdge, EdgeLabelRenderer, getBezierPath, Position, useStore, type EdgeProps, type ReactFlowState } from '@xyflow/react';
 import { EdgeIdSchema, NodeIdSchema } from '../model/strategy';
-import type { StrategyFlowEdge } from './flow';
+import { forkPoint, type EdgeFork, type StrategyFlowEdge } from './flow';
 import { InlineEditContext, InlineInput } from './InlineEdit';
 import { PlayIcon } from './PlayIcon';
 
@@ -25,15 +25,31 @@ export function StrategyEdgeView({
 }: EdgeProps<StrategyFlowEdge>) {
 	const selectEdge = useContext(SelectEdgeContext);
 	const { start } = useContext(InlineEditContext);
-	const [path, labelX, labelY] = getBezierPath({
-		sourceX,
-		sourceY,
-		targetX,
-		targetY,
-		sourcePosition,
-		targetPosition,
-	});
-	const label = data?.label ?? '';
+	const fork = data?.fork ?? null;
+	const forkAt = useStore(useCallback((state: ReactFlowState) => forkKey(state, fork), [fork]));
+	let path: string;
+	let labelX: number;
+	let labelY: number;
+	if (forkAt === null) {
+		[path, labelX, labelY] = getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition });
+	} else {
+		const [x, y] = forkAt.split(',').map(Number) as [number, number];
+		const point = forkPoint({ x: sourceX, y: sourceY }, [{ x, y }]);
+		const [trunk] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX: point.x, targetY: point.y, targetPosition: Position.Top });
+		const [branch, branchX, branchY] = getBezierPath({
+			sourceX: point.x,
+			sourceY: point.y,
+			sourcePosition: Position.Bottom,
+			targetX,
+			targetY,
+			targetPosition,
+		});
+		path = `${trunk} ${branch}`;
+		[labelX, labelY] = fork?.leader ? [point.x, point.y] : [branchX, branchY];
+	}
+	// Only the first outcome of a shared reaction draws its words; the others draw just their branch.
+	const words = data?.label ?? '';
+	const label = fork && !fork.leader ? '' : words;
 	const hasMedia = (data?.mediaCount ?? 0) > 0;
 	const editing = data?.editing ?? false;
 	const position = { transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` };
@@ -45,7 +61,7 @@ export function StrategyEdgeView({
 				markerEnd={markerEnd}
 				style={{
 					stroke: selected ? EDGE_COLOR_SELECTED : EDGE_COLOR,
-					...(label === '' ? { strokeDasharray: '5 4' } : {}),
+					...(words === '' ? { strokeDasharray: '5 4' } : {}),
 				}}
 			/>
 			{editing && (
@@ -53,7 +69,7 @@ export function StrategyEdgeView({
 					<div className="edge-pill editing nodrag nopan selected" style={position}>
 						<InlineInput
 							target={{ type: 'edge', id: EdgeIdSchema.parse(id) }}
-							initial={label}
+							initial={words}
 							className="edge-pill-input"
 							label="Reaction"
 							placeholder="Reaction"
@@ -81,4 +97,20 @@ export function StrategyEdgeView({
 			)}
 		</>
 	);
+}
+
+// The average of the targets' top handles, as a string so the store only re-renders this edge when it moves.
+function forkKey(state: ReactFlowState, fork: EdgeFork | null): string | null {
+	if (!fork) return null;
+	let x = 0;
+	let y = 0;
+	let count = 0;
+	for (const id of fork.targets) {
+		const node = state.nodeLookup.get(id);
+		if (!node) continue;
+		x += node.internals.positionAbsolute.x + (node.measured.width ?? 0) / 2;
+		y += node.internals.positionAbsolute.y;
+		count += 1;
+	}
+	return count === 0 ? null : `${x / count},${y / count}`;
 }

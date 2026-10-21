@@ -92,26 +92,38 @@ export function OutlinePane({ doc, selection, onSelectEntry }: Props) {
 	}
 
 	function renderRows(entries: readonly OutlineEntry[]) {
-		return groupSameReaction(entries).map((row) =>
-			row.kind === 'entry' ? (
-				renderEntry(row.entry)
-			) : (
-				<li key={`group:${row.entries[0]!.edge}`}>
-					<div className="line-group">
+		return groupSameReaction(entries).map((row) => {
+			if (row.kind === 'entry') return renderEntry(row.entry);
+			// The reaction row stands for the shared pill on the canvas, which selects the first outcome's connection.
+			const first = row.entries[0]!;
+			const leader = first.edge;
+			const lit = selection?.type === 'edge' && row.entries.some((entry) => entry.edge === selection.id);
+			return (
+				<li key={`group:${leader}`}>
+					<div className={`line${lit ? ' lit' : ''}`}>
 						<span className="line-disclosure-gap" />
-						<span className="line-text">
-							<em>{row.phrase}</em>
-							<span className="line-label">{row.entries.length} options</span>
-						</span>
+						<button
+							className="line-row"
+							aria-current={lit ? 'true' : undefined}
+							onClick={() => {
+								// A jump is the outline's way of selecting a connection rather than a node.
+								if (leader) onSelectEntry({ kind: 'jump', edge: leader, reaction: first.reaction, node: first.node, name: first.name, back: false });
+							}}
+						>
+							<span className="line-text">
+								<em>{row.phrase}</em>
+							</span>
+						</button>
 					</div>
-					<ul>{row.entries.map((entry) => renderEntry(entry, undefined, true))}</ul>
+					<ul className="line-options">{row.entries.map((entry) => renderEntry(entry, undefined, true))}</ul>
 				</li>
-			),
-		);
+			);
+		});
 	}
 
 	function renderEntry(entry: OutlineEntry, label?: string, grouped = false) {
-		const lit = isLit(entry, selection);
+		// Inside a group, selecting a connection lights the reaction row above instead.
+		const lit = grouped && selection?.type === 'edge' ? false : isLit(entry, selection);
 		const phrase = grouped || (entry.kind === 'step' && entry.edge === null) ? null : reactionPhrase(entry.reaction);
 		const isCollapsed = entry.kind === 'step' && collapsed.has(entry.node);
 		const hasChildren = entry.kind === 'step' && entry.next.length > 0;

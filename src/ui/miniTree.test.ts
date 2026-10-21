@@ -49,6 +49,16 @@ describe('miniTree', () => {
 		expect(tree.links.filter((link) => link.reaction)).toHaveLength(2);
 	});
 
+	it('forks outcomes that share a reaction from one point', () => {
+		const doc = graph(['a', 'b', 'c', 'd'], [['a', 'b', 'posts arm out'], ['a', 'c', 'posts arm out'], ['a', 'd', 'he sits back']]);
+		const tree = miniTree(toOutline(doc));
+		expect(tree.dots).toContainEqual({ x: 0.5, y: 0.5, kind: 'fork' });
+		expect(tree.links).toContainEqual({ x1: 0.5, y1: 0.5, x2: 1, y2: 0, reaction: true });
+		expect(tree.links).toContainEqual({ x1: 0.5, y1: 0.5, x2: 1, y2: 1, reaction: true });
+		expect(tree.links).toContainEqual({ x1: 0, y1: 1.25, x2: 0.5, y2: 0.5, reaction: true });
+		expect(tree.links).toContainEqual({ x1: 0, y1: 1.25, x2: 1, y2: 2, reaction: true });
+	});
+
 	it('draws a rejoin as a jump dot', () => {
 		const tree = miniTree(toOutline(graph(['a', 'b'], [['a', 'b'], ['b', 'a', 'he escapes']])));
 		expect(tree.dots).toContainEqual({ x: 2, y: 0, kind: 'jump' });

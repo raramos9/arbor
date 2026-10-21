@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { armDragDoc, armDragInput } from './fixtures';
-import { createStrategy, parseStrategy } from './strategy';
+import { createStrategy, EdgeIdSchema, parseStrategy, reactionGroup } from './strategy';
 
 describe('parseStrategy', () => {
 	it('accepts the arm-drag example', () => {
@@ -169,5 +169,20 @@ describe('position', () => {
 
 	it('refuses an unknown listed id', () => {
 		expect(withPosition({ kind: 'listed', id: 'rubber-guard' }).ok).toBe(false);
+	});
+});
+
+describe('reactionGroup', () => {
+	const eid = (id: string) => EdgeIdSchema.parse(id);
+	it('finds siblings from the same node with the same words', () => {
+		const doc = armDragDoc();
+		doc.edges[eid('e3')]!.label = 'if ARM stays displaced ';
+		expect(reactionGroup(doc, eid('e2'))).toEqual(['e2', 'e3']);
+	});
+	it('keeps different reactions and unlabeled connections on their own', () => {
+		const doc = armDragDoc();
+		expect(reactionGroup(doc, eid('e2'))).toEqual(['e2']);
+		expect(reactionGroup(doc, eid('e1'))).toEqual(['e1']);
+		expect(reactionGroup(doc, eid('ghost'))).toEqual([]);
 	});
 });

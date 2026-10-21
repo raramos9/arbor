@@ -1,7 +1,7 @@
 import type { StrategyDoc } from '../model/strategy';
-import type { Outline, OutlineEntry } from './outline';
+import { groupSameReaction, type Outline, type OutlineEntry } from './outline';
 
-export type TreeDotKind = 'start' | 'step' | 'end' | 'jump';
+export type TreeDotKind = 'start' | 'step' | 'end' | 'jump' | 'fork';
 export type TreeDot = { x: number; y: number; kind: TreeDotKind };
 export type TreeLink = { x1: number; y1: number; x2: number; y2: number; reaction: boolean };
 export type MiniTree = { dots: TreeDot[]; links: TreeLink[]; columns: number; rows: number; clipped: boolean };
@@ -20,18 +20,36 @@ export function miniTree(outline: Outline, limits = MINI_TREE_LIMITS): MiniTree 
 		columns = Math.max(columns, depth + 1);
 		const children = entry.kind === 'step' ? entry.next : [];
 		if (children.length > 0 && depth + 1 >= limits.depth) clipped = true;
-		const placed: { y: number; reaction: boolean }[] = [];
+		const placed: { y: number; reaction: boolean; fork?: boolean }[] = [];
 		if (depth + 1 < limits.depth) {
-			for (const child of children) {
+			for (const row of groupSameReaction(children)) {
 				if (rows >= limits.rows) {
 					clipped = true;
 					break;
 				}
-				placed.push({ y: place(child, depth + 1), reaction: child.reaction.trim() !== '' });
+				if (row.kind === 'entry') {
+					placed.push({ y: place(row.entry, depth + 1), reaction: row.entry.reaction.trim() !== '' });
+					continue;
+				}
+				// Outcomes of one reaction share a trunk to a fork halfway across, then branch.
+				const ys: number[] = [];
+				for (const entry of row.entries) {
+					if (rows >= limits.rows) {
+						clipped = true;
+						break;
+					}
+					ys.push(place(entry, depth + 1));
+				}
+				const forkY = (ys[0]! + ys[ys.length - 1]!) / 2;
+				for (const y of ys) links.push({ x1: depth + 0.5, y1: forkY, x2: depth + 1, y2: y, reaction: true });
+				dots.push({ x: depth + 0.5, y: forkY, kind: 'fork' });
+				placed.push({ y: forkY, reaction: true, fork: true });
 			}
 		}
 		const y = placed.length > 0 ? (placed[0]!.y + placed[placed.length - 1]!.y) / 2 : rows++;
-		for (const child of placed) links.push({ x1: depth, y1: y, x2: depth + 1, y2: child.y, reaction: child.reaction });
+		for (const child of placed) {
+			links.push({ x1: depth, y1: y, x2: child.fork ? depth + 0.5 : depth + 1, y2: child.y, reaction: child.reaction });
+		}
 		const kind: TreeDotKind =
 			depth === 0 ? 'start' : entry.kind === 'jump' ? 'jump' : children.length === 0 ? 'end' : 'step';
 		dots.push({ x: depth, y, kind });

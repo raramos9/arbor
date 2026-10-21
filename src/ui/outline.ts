@@ -1,4 +1,4 @@
-import type { EdgeId, NodeId, StrategyDoc, StrategyEdge } from '../model/strategy';
+import { reactionKey, type EdgeId, type NodeId, type StrategyDoc, type StrategyEdge } from '../model/strategy';
 import type { Selection } from './flow';
 
 export type OutlineStep = {
@@ -142,7 +142,7 @@ export type OutlineRow = { kind: 'entry'; entry: OutlineEntry } | { kind: 'group
 
 // Siblings that share a typed reaction are the outcomes of one reaction, so they sit under it once.
 export function groupSameReaction(entries: readonly OutlineEntry[]): OutlineRow[] {
-	const keyOf = (entry: OutlineEntry) => entry.reaction.trim().replace(/^if /i, '').toLowerCase();
+	const keyOf = (entry: OutlineEntry) => reactionKey(entry.reaction);
 	const counts = new Map<string, number>();
 	for (const entry of entries) counts.set(keyOf(entry), (counts.get(keyOf(entry)) ?? 0) + 1);
 	const rows: OutlineRow[] = [];
