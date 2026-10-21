@@ -7,6 +7,7 @@ import { startLabel } from '../model/positions';
 import {
 	newEdgeId,
 	newNodeId,
+	reactionGroup,
 	type EdgeId,
 	type NodeId,
 	type StrategyDoc,
@@ -19,6 +20,7 @@ import {
 	findFreeSpot,
 	occupiedRects,
 	reactionSource,
+	optionSpot,
 	reactionSpot,
 	type Rect,
 	type Point,
@@ -177,7 +179,7 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 			if (node && node.name !== text) exec({ type: 'updateNode', id: target.id, patch: { name: text } });
 		} else {
 			const edge = doc.edges[target.id];
-			if (edge && edge.label !== text.trim()) exec({ type: 'updateEdge', id: target.id, patch: { label: text } });
+			if (edge && edge.label !== text.trim()) exec({ type: 'relabelEdges', ids: reactionGroup(doc, target.id), label: text });
 		}
 		setEditing(null);
 	}
@@ -240,28 +242,38 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 
 	function addReaction() {
 		const from = reactionSource(doc, selection);
-		const created = branchFrom(from, '');
+		const source = rectOf(from);
+		const childCount = Object.values(doc.edges).filter((edge) => edge.from === from).length;
+		const at = reactionSpot(source, childCount, occupiedRects(getNodes(), getEdges()));
+		const created = branchFrom(from, '', at);
 		if (created) startEdit({ type: 'edge', id: created.edge });
 	}
 
-	// Another outcome for the same reaction: a sibling connection from the same node, carrying the same words.
+	// Another outcome for the same reaction: a sibling connection from the same node, carrying the same words,
+	// placed in the row of the outcomes it joins.
 	function addOption(edgeId: EdgeId) {
 		const edge = doc.edges[edgeId];
 		if (!edge) return;
-		const created = branchFrom(edge.from, edge.label);
+		const outcomes = reactionGroup(doc, edgeId).flatMap((id) => {
+			const target = doc.edges[id]?.to;
+			return target ? [rectOf(target)] : [];
+		});
+		const at = optionSpot(outcomes, occupiedRects(getNodes(), getEdges()));
+		const created = branchFrom(edge.from, edge.label, at);
 		if (created) startEdit({ type: 'node', id: created.node });
 	}
 
-	function branchFrom(from: NodeId, label: string): { edge: EdgeId; node: NodeId } | null {
-		const flowNode = getNodes().find((n) => n.id === from);
-		const origin = flowNode?.position ?? doc.layout[from] ?? { x: 0, y: 0 };
-		const source: Rect = {
+	function rectOf(id: NodeId): Rect {
+		const flowNode = getNodes().find((n) => n.id === id);
+		const origin = flowNode?.position ?? doc.layout[id] ?? { x: 0, y: 0 };
+		return {
 			...origin,
 			width: flowNode?.measured?.width ?? NODE_SIZE.width,
 			height: flowNode?.measured?.height ?? NODE_SIZE.height,
 		};
-		const childCount = Object.values(doc.edges).filter((edge) => edge.from === from).length;
-		const at = reactionSpot(source, childCount, occupiedRects(getNodes(), getEdges()));
+	}
+
+	function branchFrom(from: NodeId, label: string, at: Point): { edge: EdgeId; node: NodeId } | null {
 		const edge = newEdgeId();
 		const node = newNodeId();
 		const result = exec({ type: 'addReaction', from, edge, node, at, label });

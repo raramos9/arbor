@@ -9,6 +9,7 @@ import {
 	NODE_SIZE,
 	occupiedRects,
 	reactionSource,
+	optionSpot,
 	reactionSpot,
 	toFlowEdges,
 	toFlowNodes,
@@ -48,7 +49,7 @@ describe('occupiedRects', () => {
 		type: 'strategy',
 		source: 'a',
 		target: 'b',
-		data: { label, mediaCount, editing: false },
+		data: { label, mediaCount, editing: false, fork: null },
 	});
 
 	it('keeps a new node below a connected node off the label', () => {
@@ -100,11 +101,22 @@ describe('toFlowEdges', () => {
 		doc.edges['e2'] = { ...doc.edges['e2']!, media: [clip, clip] };
 		const edges = toFlowEdges(doc, null, null);
 		expect(edges.map((edge) => edge.data)).toEqual([
-			{ label: '', mediaCount: 0, editing: false },
-			{ label: 'Arm stays displaced', mediaCount: 2, editing: false },
-			{ label: 'Arm wraps around my back', mediaCount: 0, editing: false },
+			{ label: '', mediaCount: 0, editing: false, fork: null },
+			{ label: 'Arm stays displaced', mediaCount: 2, editing: false, fork: null },
+			{ label: 'Arm wraps around my back', mediaCount: 0, editing: false, fork: null },
 		]);
 		expect(edges.every((edge) => edge.type === 'strategy' && edge.label === undefined)).toBe(true);
+	});
+
+	it('forks outcomes of one reaction, with the first one carrying the pill', () => {
+		const doc = armDragDoc();
+		doc.edges['e3'] = { ...doc.edges['e3']!, label: 'arm stays displaced' };
+		const forks = toFlowEdges(doc, null, null).map((edge) => edge.data?.fork);
+		expect(forks).toEqual([
+			null,
+			{ leader: true, targets: ['back-take', 'triangle'] },
+			{ leader: false, targets: ['back-take', 'triangle'] },
+		]);
 	});
 
 	it('marks only the selected edge', () => {
@@ -165,6 +177,19 @@ describe('reactionSource', () => {
 
 	it('falls back to the start node', () => {
 		expect(reactionSource(doc, null)).toBe(doc.rootNodeId);
+	});
+});
+
+describe('optionSpot', () => {
+	it('lands beside the rightmost outcome, in its row', () => {
+		const a = { x: 0, y: 200, width: 150, height: 40 };
+		const b = { x: 300, y: 200, width: 180, height: 40 };
+		expect(optionSpot([a, b], [a, b])).toEqual({ x: 520, y: 200 });
+	});
+	it('steps down when that spot is taken', () => {
+		const a = { x: 0, y: 200, width: 150, height: 40 };
+		const blocker = { x: 190, y: 200, width: 150, height: 40 };
+		expect(optionSpot([a], [a, blocker]).y).toBeGreaterThan(200);
 	});
 });
 

@@ -1,5 +1,5 @@
 import { MarkerType, type Edge, type Node } from '@xyflow/react';
-import type { StrategyDoc, StrategyEdge } from '../model/strategy';
+import { reactionGroup, type StrategyDoc, type StrategyEdge } from '../model/strategy';
 import type { EdgeId, NodeId } from '../model/strategy';
 
 export type Selection = { type: 'node'; id: NodeId } | { type: 'edge'; id: EdgeId } | null;
@@ -12,7 +12,9 @@ export type StrategyNodeData = {
 	editing: boolean;
 };
 export type StrategyFlowNode = Node<StrategyNodeData, 'strategy'>;
-export type StrategyEdgeData = { label: string; mediaCount: number; editing: boolean };
+// Outcomes of one reaction share a fork: one trunk from the source, one pill, then a branch to each target.
+export type EdgeFork = { leader: boolean; targets: string[] };
+export type StrategyEdgeData = { label: string; mediaCount: number; editing: boolean; fork: EdgeFork | null };
 export type StrategyFlowEdge = Edge<StrategyEdgeData, 'strategy'>;
 export type Size = { width: number; height: number };
 
@@ -74,6 +76,12 @@ export function toFlowNodes(
 	});
 }
 
+function forkOf(doc: StrategyDoc, edge: StrategyEdge): EdgeFork | null {
+	const group = reactionGroup(doc, edge.id);
+	if (group.length < 2) return null;
+	return { leader: group[0] === edge.id, targets: group.map((id) => doc.edges[id]!.to) };
+}
+
 export function toFlowEdges(doc: StrategyDoc, selection: Selection, editing: Selection): StrategyFlowEdge[] {
 	return Object.values(doc.edges).map((edge) => ({
 		id: edge.id,
@@ -84,6 +92,7 @@ export function toFlowEdges(doc: StrategyDoc, selection: Selection, editing: Sel
 			label: edge.label,
 			mediaCount: edge.media.length,
 			editing: editing?.type === 'edge' && editing.id === edge.id,
+			fork: forkOf(doc, edge),
 		},
 		ariaLabel: edgeAriaLabel(doc, edge),
 		markerEnd: { type: MarkerType.ArrowClosed },
@@ -128,15 +137,29 @@ export function occupiedRects(nodes: readonly StrategyFlowNode[], edges: readonl
 	const labels = edges.flatMap((edge) => {
 		const from = rects.get(edge.source);
 		const to = rects.get(edge.target);
-		const label = edge.data?.label ?? '';
+		const fork = edge.data?.fork ?? null;
+		const label = fork && !fork.leader ? '' : (edge.data?.label ?? '');
 		const hasMedia = (edge.data?.mediaCount ?? 0) > 0;
 		if (!from || !to || (label === '' && !hasMedia)) return [];
 		const width = Math.min(pillWidth(label, hasMedia), LABEL_MAX_WIDTH);
-		const centerX = (from.x + from.width / 2 + to.x + to.width / 2) / 2;
-		const centerY = (from.y + from.height + to.y) / 2;
+		const targets = fork?.leader ? fork.targets.flatMap((id) => rects.get(id) ?? []) : [to];
+		const point = forkPoint(
+			{ x: from.x + from.width / 2, y: from.y + from.height },
+			targets.map((rect) => ({ x: rect.x + rect.width / 2, y: rect.y })),
+		);
+		const centerX = point.x;
+		const centerY = point.y;
 		return [{ x: centerX - width / 2, y: centerY - LABEL_HEIGHT / 2, width, height: LABEL_HEIGHT }];
 	});
 	return [...rects.values(), ...labels];
+}
+
+// Halfway from the source handle to the average of the targets' handles.
+export function forkPoint(source: Point, targets: readonly Point[]): Point {
+	if (targets.length === 0) return source;
+	const x = targets.reduce((sum, t) => sum + t.x, 0) / targets.length;
+	const y = targets.reduce((sum, t) => sum + t.y, 0) / targets.length;
+	return { x: (source.x + x) / 2, y: (source.y + y) / 2 };
 }
 
 export function findFreeSpot(candidate: Point, occupied: readonly Rect[]): Point {
@@ -166,6 +189,13 @@ export function reactionSource(doc: StrategyDoc, selection: Selection): NodeId {
 		if (edge) return edge.to;
 	}
 	return doc.rootNodeId;
+}
+
+// Beside the rightmost outcome of the reaction, in its row.
+export function optionSpot(outcomes: readonly Rect[], occupied: readonly Rect[]): Point {
+	const rightmost = outcomes.reduce<Rect | null>((best, rect) => (!best || rect.x + rect.width > best.x + best.width ? rect : best), null);
+	if (!rightmost) return findFreeSpot({ x: 0, y: 0 }, occupied);
+	return findFreeSpot({ x: rightmost.x + rightmost.width + REACTION_GAP_X, y: rightmost.y }, occupied);
 }
 
 export function reactionSpot(source: Rect, childCount: number, occupied: readonly Rect[]): Point {

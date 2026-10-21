@@ -13,6 +13,8 @@ function editKey(cmd: Command): string | null {
 		case 'updateNode':
 		case 'updateEdge':
 			return `${cmd.type}:${cmd.id}:${Object.keys(cmd.patch).sort().join(',')}`;
+		case 'relabelEdges':
+			return `relabel:${[...cmd.ids].sort().join(',')}`;
 		case 'updateMeta':
 			if ('position' in cmd.patch && cmd.patch.position?.kind !== 'other') return null;
 			return `meta:${Object.keys(cmd.patch).sort().join(',')}`;

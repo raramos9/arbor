@@ -36,6 +36,7 @@ export type Command =
 			id: EdgeId;
 			patch: { label?: string; notes?: string };
 	  }
+	| { type: 'relabelEdges'; ids: EdgeId[]; label: string }
 	| { type: 'deleteEdge'; id: EdgeId }
 	| { type: 'moveNode'; id: NodeId; at: { x: number; y: number } }
 	| { type: 'setRoot'; id: NodeId }
@@ -163,6 +164,13 @@ export function apply(doc: StrategyDoc, cmd: Command): ApplyResult {
 				notes: cmd.patch.notes ?? edge.notes,
 			};
 			return { ok: true, doc: stamp({ ...doc, edges: { ...doc.edges, [cmd.id]: next } }) };
+		}
+		case 'relabelEdges': {
+			if (cmd.ids.length === 0 || cmd.ids.some((id) => !doc.edges[id])) return refuse('That edge does not exist.');
+			const label = cmd.label.trim();
+			const edges = { ...doc.edges };
+			for (const id of cmd.ids) edges[id] = { ...edges[id]!, label };
+			return { ok: true, doc: stamp({ ...doc, edges }) };
 		}
 		case 'deleteEdge': {
 			if (!doc.edges[cmd.id]) return refuse('That edge does not exist.');

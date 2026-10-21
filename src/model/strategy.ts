@@ -166,3 +166,19 @@ export function createStrategy(args: {
 		position: args.position,
 	};
 }
+
+// Two connections carry the same reaction when their words match, ignoring case, spacing and a leading "if".
+export function reactionKey(label: string): string {
+	return label.trim().replace(/^if /i, '').toLowerCase();
+}
+
+// Connections from one node that share a reaction are outcomes of that one reaction.
+export function reactionGroup(doc: StrategyDoc, id: EdgeId): EdgeId[] {
+	const edge = doc.edges[id];
+	if (!edge) return [];
+	const key = reactionKey(edge.label);
+	if (key === '') return [id];
+	return Object.values(doc.edges)
+		.filter((other) => other.from === edge.from && reactionKey(other.label) === key)
+		.map((other) => other.id);
+}

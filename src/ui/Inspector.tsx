@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import type { ApplyResult, Command } from '../model/commands';
 import { positionName } from '../model/positions';
-import { RulesetSchema, SideSchema, type EdgeId, type StrategyDoc } from '../model/strategy';
+import { reactionGroup, RulesetSchema, SideSchema, type EdgeId, type StrategyDoc } from '../model/strategy';
 import { Field, ReadField, SelectField } from './Field';
 import type { Selection } from './flow';
 import { MediaList } from './MediaList';
@@ -131,12 +132,7 @@ function EditInspector({ doc, node, edge, error, exec, onDeleted, onAddReaction,
 				<div className="form" key={edge.id}>
 					<h2>Connection</h2>
 					<p className="muted">{connectionName(doc, edge)}</p>
-					<Field
-						label="Reaction"
-						placeholder="How your opponent reacts"
-						value={edge.label}
-						onChange={(label) => exec({ type: 'updateEdge', id: edge.id, patch: { label } })}
-					/>
+					<ReactionField key={edge.id} doc={doc} edge={edge.id} exec={exec} />
 					<Field
 						label="Then"
 						placeholder="Your next move"
@@ -195,5 +191,22 @@ function EditInspector({ doc, node, edge, error, exec, onDeleted, onAddReaction,
 			)}
 			{error && <p className="error">{error}</p>}
 		</aside>
+	);
+}
+
+// The outcomes sharing this reaction are fixed when the connection is selected, so clearing the words while
+// typing doesn't drop the others from the group or pull in unrelated "then" connections.
+function ReactionField({ doc, edge, exec }: { doc: StrategyDoc; edge: EdgeId; exec: (cmd: Command) => ApplyResult }) {
+	const [group] = useState(() => reactionGroup(doc, edge));
+	return (
+		<>
+			<Field
+				label="Reaction"
+				placeholder="How your opponent reacts"
+				value={doc.edges[edge]?.label ?? ''}
+				onChange={(label) => exec({ type: 'relabelEdges', ids: group.filter((id) => doc.edges[id]), label })}
+			/>
+			{group.length > 1 && <p className="muted field-note">Shared by {group.length} options. Renaming it renames them all.</p>}
+		</>
 	);
 }

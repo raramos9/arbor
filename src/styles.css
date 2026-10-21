@@ -168,10 +168,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .line-text em, .line-jump { color: var(--muted); font-style: italic; }
 .line-text strong { font-weight: 500; }
 .line.lit strong { color: var(--accent-strong); }
-.line-group { display: flex; align-items: flex-start; margin-top: 2px; }
-.line-group .line-text { display: flex; align-items: baseline; gap: 8px; min-height: 32px; padding: 6px 8px 6px 4px; }
-.line-group em { color: var(--muted); font-style: italic; }
-.line-group .line-label { display: inline; }
+.lines li > ul.line-options { margin-left: 13px; padding-left: 11px; border-left: 1px solid var(--border); }
 .line-dot { flex: none; width: 8px; height: 8px; margin-top: 6px; border-radius: 50%; background: var(--muted); }
 
 .canvas { flex: 1; position: relative; min-width: 0; }
@@ -418,6 +415,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
 .account { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 
+.field-note { margin-top: -6px; font-size: 12px; line-height: 16px; }
 .read-field { display: flex; flex-direction: column; gap: 4px; }
 .read-label { font-size: 12px; line-height: 16px; color: var(--muted); }
 .read-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -533,6 +531,7 @@ p.banner.error { border-color: #f1c4c0; background: #fdf3f2; }
 .mt-start { fill: var(--accent); }
 .mt-step { fill: var(--panel); stroke: var(--line); stroke-width: 1.5; }
 .mt-end { fill: var(--muted); }
+.mt-fork { fill: var(--line); }
 .mt-jump { fill: var(--panel); stroke: var(--muted); stroke-width: 1.25; stroke-dasharray: 2 1.5; }
 .card:has(.card-link:hover) .mt-link { stroke: #818cf8; }
 
@@ -566,7 +565,7 @@ p.banner.error { border-color: #f1c4c0; background: #fdf3f2; }
 .preview { list-style: none; margin: 6px 0 0; padding: 0; font-size: 12px; line-height: 18px; }
 .preview li { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .preview em { font-style: normal; color: var(--muted); }
-.preview .preview-more, .preview .preview-options { color: var(--muted); }
+.preview .preview-more { color: var(--muted); }
 
 .ghost-cell { display: flex; }
 button.card.ghost {

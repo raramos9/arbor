@@ -170,9 +170,7 @@ function FeedCard({ item, showHandle }: { item: PublishedSummary; showHandle: bo
 							{lines.map((line, index) => (
 								<li key={index} style={{ paddingLeft: line.depth * 10 }}>
 									{'options' in line ? (
-										<>
-											<em>{line.phrase}</em> <span className="preview-options">{line.options} options</span>
-										</>
+<em>{line.phrase}</em>
 									) : (
 										<>
 											{line.phrase && <em>{line.phrase} </em>}

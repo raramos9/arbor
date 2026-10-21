@@ -78,6 +78,19 @@ describe('addReaction', () => {
 	});
 });
 
+describe('relabelEdges', () => {
+	it('renames every listed connection in one step', () => {
+		const doc = ok(armDragDoc(), { type: 'relabelEdges', ids: [eid('e2'), eid('e3')], label: ' he posts ' });
+		expect(doc.edges[eid('e2')]?.label).toBe('he posts');
+		expect(doc.edges[eid('e3')]?.label).toBe('he posts');
+		expect(doc.edges[eid('e1')]?.label).toBe('');
+	});
+	it('refuses an unknown or empty list', () => {
+		refused(armDragDoc(), { type: 'relabelEdges', ids: [eid('e2'), eid('ghost')], label: 'x' });
+		refused(armDragDoc(), { type: 'relabelEdges', ids: [], label: 'x' });
+	});
+});
+
 describe('updateNode', () => {
 	it('edits name and notes', () => {
 		const doc = ok(armDragDoc(), {
