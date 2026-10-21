@@ -89,31 +89,31 @@ export function StrategyCanvas({ doc, selection, onSelect, access }: Props) {
 	return (
 		<SelectEdgeContext.Provider value={selectEdge}>
 			<InlineEditContext.Provider value={inlineEdit}>
-			<ReactFlow
-				nodes={nodes}
-				edges={edges}
-				nodeTypes={nodeTypes}
-				edgeTypes={edgeTypes}
-				onNodesChange={onNodesChange}
-				onEdgesChange={onEdgesChange}
-				onConnect={access.mode === 'edit' ? access.onConnect : undefined}
-				onNodeClick={(_, node) => selectNode(node.id)}
-				onNodeDragStart={editable ? (_, node) => selectNode(node.id) : undefined}
-				onNodeDoubleClick={editable ? (_, node) => startNodeEdit(node.id) : undefined}
-				onEdgeDoubleClick={editable ? (_, edge) => startEdgeEdit(edge.id) : undefined}
-				onEdgeClick={(_, edge) => selectEdge(edge.id)}
-				onPaneClick={() => onSelect(null)}
-				nodesDraggable={editable}
-				nodesConnectable={editable}
-				edgesReconnectable={editable}
-				zoomOnDoubleClick={false}
-				deleteKeyCode={null}
-				panActivationKeyCode={null}
-				fitView
-			>
-				<Background />
-				<Controls showInteractive={false} />
-			</ReactFlow>
+				<ReactFlow
+					nodes={nodes}
+					edges={edges}
+					nodeTypes={nodeTypes}
+					edgeTypes={edgeTypes}
+					onNodesChange={onNodesChange}
+					onEdgesChange={onEdgesChange}
+					onConnect={access.mode === 'edit' ? access.onConnect : undefined}
+					onNodeClick={(_, node) => selectNode(node.id)}
+					onNodeDragStart={editable ? (_, node) => selectNode(node.id) : undefined}
+					onNodeDoubleClick={editable ? (_, node) => startNodeEdit(node.id) : undefined}
+					onEdgeDoubleClick={editable ? (_, edge) => startEdgeEdit(edge.id) : undefined}
+					onEdgeClick={(_, edge) => selectEdge(edge.id)}
+					onPaneClick={() => onSelect(null)}
+					nodesDraggable={editable}
+					nodesConnectable={editable}
+					edgesReconnectable={editable}
+					zoomOnDoubleClick={false}
+					deleteKeyCode={null}
+					panActivationKeyCode={null}
+					fitView
+				>
+					<Background />
+					<Controls showInteractive={false} />
+				</ReactFlow>
 			</InlineEditContext.Provider>
 		</SelectEdgeContext.Provider>
 	);
