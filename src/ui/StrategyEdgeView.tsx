@@ -5,7 +5,6 @@ import { forkPoint, type EdgeFork, type StrategyFlowEdge } from './flow';
 import { InlineEditContext, InlineInput } from './InlineEdit';
 import { PlayIcon } from './PlayIcon';
 
-export const SelectEdgeContext = createContext<(id: string) => void>(() => {});
 // The pill stands for the whole reaction, so it selects every outcome rather than one.
 export const SelectReactionContext = createContext<(id: string) => void>(() => {});
 
