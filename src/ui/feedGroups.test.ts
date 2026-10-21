@@ -41,13 +41,24 @@ describe('groupByStart', () => {
 		expect(groups[0]?.items).toHaveLength(2);
 	});
 
-	it('names a null position and the standing-on-standing case', () => {
+	it('names the standing-on-standing case', () => {
 		const groups = groupByStart([
-			summary(null, 'top'),
 			summary({ kind: 'listed', id: 'standing' }, 'standing'),
 			summary({ kind: 'listed', id: 'standing' }, 'top'),
 		]);
-		expect(groups.map((g) => g.heading)).toEqual(['No starting position · top', 'Standing', 'Standing · top']);
+		expect(groups.map((g) => g.heading)).toEqual(['Standing', 'Standing · top']);
+	});
+
+	it('folds an unset standing start into Standing and shelves the rest last, across sides', () => {
+		const unsetTop = summary(null, 'top');
+		const unsetStanding = summary(null, 'standing');
+		const listed = summary({ kind: 'listed', id: 'standing' }, 'standing');
+		const unsetBottom = summary(null, 'bottom');
+		const guard = closed('bottom');
+		const groups = groupByStart([unsetTop, unsetStanding, guard, listed, unsetBottom]);
+		expect(groups.map((g) => g.heading)).toEqual(['Standing', 'Closed guard · bottom', 'Position not set']);
+		expect(groups[0]?.items).toEqual([unsetStanding, listed]);
+		expect(groups[2]?.items).toEqual([unsetTop, unsetBottom]);
 	});
 
 	it('returns nothing for no items', () => {
