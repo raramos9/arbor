@@ -3,7 +3,7 @@ import { ReactFlowProvider, useReactFlow, type Connection } from '@xyflow/react'
 import { exportStrategy } from '../exchange';
 import { exportFileName } from '../model/exchange';
 import type { ApplyResult, Command } from '../model/commands';
-import { positionName } from '../model/positions';
+import { startLabel } from '../model/positions';
 import {
 	newEdgeId,
 	newNodeId,
@@ -250,7 +250,7 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 				<h1>{doc.title || 'Untitled'}</h1>
 				{doc.position ? (
 					<span className="position-chip">
-						{positionName(doc.position)} · {doc.startingSide}
+						{startLabel(doc.position, doc.startingSide)}
 					</span>
 				) : (
 					<button className="position-chip" onClick={() => select(null)}>

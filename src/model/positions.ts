@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { Side } from './strategy';
 
 export const POSITIONS = [
 	{ id: 'standing', name: 'Standing' },
@@ -39,4 +40,10 @@ export function canonicalPosition(position: Position): Position {
 	const typed = position.name.trim().toLowerCase();
 	const listed = POSITIONS.find((p) => p.name.toLowerCase() === typed);
 	return listed ? { kind: 'listed', id: listed.id } : position;
+}
+
+export function startLabel(position: Position, side: Side): string {
+	const canonical = canonicalPosition(position);
+	if (canonical.kind === 'listed' && canonical.id === 'standing' && side === 'standing') return 'Standing';
+	return `${positionName(canonical)} · ${side}`;
 }
