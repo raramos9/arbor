@@ -100,6 +100,15 @@ export function settleSelection(doc: StrategyDoc, selection: Selection): Selecti
 	return selection;
 }
 
+export type PillKey = { key: string; metaKey: boolean; ctrlKey: boolean; altKey: boolean };
+
+// A clicked pill keeps focus and is portaled outside the edge's element, so the editor's Enter shortcut skips it
+// and the browser would turn Enter into another click. The pill handles its own rename key instead.
+export function pillKeyAction(e: PillKey, selected: boolean): 'rename' | null {
+	if (e.metaKey || e.ctrlKey || e.altKey) return null;
+	return e.key === 'Enter' && selected ? 'rename' : null;
+}
+
 function forkOf(doc: StrategyDoc, edge: StrategyEdge, selected: ReadonlySet<EdgeId>): EdgeFork | null {
 	const group = reactionGroup(doc, edge.id);
 	if (group.length < 2) return null;

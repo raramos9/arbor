@@ -12,6 +12,7 @@ import {
 	optionSpot,
 	reactionSpot,
 	selectedEdgeIds,
+	pillKeyAction,
 	settleSelection,
 	toFlowEdges,
 	toFlowNodes,
@@ -271,5 +272,28 @@ describe('reactionSpot', () => {
 		const spot = reactionSpot(source, 0, [source, { ...first, ...NODE_SIZE }]);
 		expect(spot.x).toBe(first.x);
 		expect(spot.y).toBeGreaterThanOrEqual(first.y + NODE_SIZE.height);
+	});
+});
+
+describe('pillKeyAction', () => {
+	const key = (k: string, mods: Partial<{ metaKey: boolean; ctrlKey: boolean; altKey: boolean }> = {}) => ({
+		key: k,
+		metaKey: false,
+		ctrlKey: false,
+		altKey: false,
+		...mods,
+	});
+
+	it('renames a selected pill on Enter instead of clicking it again', () => {
+		expect(pillKeyAction(key('Enter'), true)).toBe('rename');
+	});
+
+	it('leaves Enter on an unselected pill to the button, which selects it', () => {
+		expect(pillKeyAction(key('Enter'), false)).toBeNull();
+	});
+
+	it('ignores Enter with a modifier', () => {
+		expect(pillKeyAction(key('Enter', { metaKey: true }), true)).toBeNull();
+		expect(pillKeyAction(key('Enter', { ctrlKey: true }), true)).toBeNull();
 	});
 });
