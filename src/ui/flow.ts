@@ -88,7 +88,7 @@ export function selectedEdgeIds(doc: StrategyDoc, selection: Selection): Set<Edg
 }
 
 // Keeps the selection pointing at something that still exists. `before` is the doc the selection was made in.
-// A reaction whose leader is gone follows the next outcome that still shares its words.
+// A reaction follows its group's current leader, which moves when the leader goes or an undo restores an earlier one.
 // A reaction that has shrunk to one outcome becomes that outcome's connection, unless its words were just cleared.
 export function settleSelection(doc: StrategyDoc, selection: Selection, before: StrategyDoc = doc): Selection {
 	if (!selection) return selection;
@@ -96,10 +96,12 @@ export function settleSelection(doc: StrategyDoc, selection: Selection, before: 
 	const id = selection.type === 'reaction' ? reactionLeader(doc, before, selection.id) : selection.id;
 	const leader = id ? doc.edges[id] : undefined;
 	if (!leader) return null;
-	if (selection.type === 'reaction' && leader.label !== '' && reactionGroup(doc, leader.id).length < 2) {
-		return { type: 'edge', id: leader.id };
-	}
-	return leader.id === selection.id ? selection : { type: 'reaction', id: leader.id };
+	if (selection.type === 'edge') return selection;
+	const group = reactionGroup(doc, leader.id);
+	if (leader.label !== '' && group.length < 2) return { type: 'edge', id: leader.id };
+	// An undo can bring back an earlier outcome, which then leads the group again.
+	const first = group[0] ?? leader.id;
+	return first === selection.id ? selection : { type: 'reaction', id: first };
 }
 
 function reactionLeader(doc: StrategyDoc, before: StrategyDoc, id: EdgeId): EdgeId | null {

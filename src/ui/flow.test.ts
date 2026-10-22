@@ -134,6 +134,12 @@ describe('settleSelection', () => {
 		delete after.edges['e2'];
 		expect(settleSelection(after, { type: 'reaction', id: eid('e2') }, before)).toEqual({ type: 'reaction', id: 'e3' });
 	});
+	it('moves to the restored leader when an undo brings it back', () => {
+		const doc = sharedReactionDoc();
+		doc.nodes['armbar'] = { id: NodeIdSchema.parse('armbar'), name: 'Armbar', notes: '', media: [] };
+		doc.edges['e4'] = { ...doc.edges['e2']!, id: eid('e4'), to: NodeIdSchema.parse('armbar') };
+		expect(settleSelection(doc, { type: 'reaction', id: eid('e3') })).toEqual({ type: 'reaction', id: 'e2' });
+	});
 	it('becomes the last outcome’s connection when only one is left', () => {
 		const before = sharedReactionDoc();
 		const after = structuredClone(before);
