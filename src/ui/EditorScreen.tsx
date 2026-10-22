@@ -175,9 +175,10 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 	}
 
 	function startEdit(target: EditTarget) {
-		// Renaming the leader of a selected reaction keeps the whole reaction selected.
-		const keepsReaction = selection?.type === 'reaction' && target.type === 'edge' && target.id === selection.id;
-		if (!keepsReaction) setSelection(target);
+		// Renaming the leader of a selected reaction keeps the whole reaction selected, even one selected in this same event.
+		setSelection((current) =>
+			current?.type === 'reaction' && target.type === 'edge' && target.id === current.id ? current : target,
+		);
 		setEditing(target);
 	}
 

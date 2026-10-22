@@ -112,10 +112,12 @@ function reactionLeader(doc: StrategyDoc, before: StrategyDoc, id: EdgeId): Edge
 
 export type PillKey = { key: string; metaKey: boolean; ctrlKey: boolean; altKey: boolean };
 
-// A clicked pill keeps focus and is portaled outside the edge's element, so the editor's Enter shortcut skips it
-// and the browser would turn Enter into another click. The pill handles its own rename key instead.
+// Enter and Space on an unselected pill are left to the button, whose click selects the reaction. A clicked pill
+// keeps focus and is portaled outside the edge's element, so the editor's own Enter shortcut skips it; once the pill
+// is selected, Enter must rename here or the browser turns it into another click. F2 renames as it does on nodes.
 export function pillKeyAction(e: PillKey, selected: boolean): 'rename' | null {
 	if (e.metaKey || e.ctrlKey || e.altKey) return null;
+	if (e.key === 'F2') return 'rename';
 	return e.key === 'Enter' && selected ? 'rename' : null;
 }
 

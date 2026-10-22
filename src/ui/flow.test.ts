@@ -313,6 +313,16 @@ describe('pillKeyAction', () => {
 		expect(pillKeyAction(key('Enter'), false)).toBeNull();
 	});
 
+	it('renames on F2 whether or not the pill is selected', () => {
+		expect(pillKeyAction(key('F2'), true)).toBe('rename');
+		expect(pillKeyAction(key('F2'), false)).toBe('rename');
+	});
+
+	it('leaves Space to the button', () => {
+		expect(pillKeyAction(key(' '), false)).toBeNull();
+		expect(pillKeyAction(key(' '), true)).toBeNull();
+	});
+
 	it('ignores Enter with a modifier', () => {
 		expect(pillKeyAction(key('Enter', { metaKey: true }), true)).toBeNull();
 		expect(pillKeyAction(key('Enter', { ctrlKey: true }), true)).toBeNull();
