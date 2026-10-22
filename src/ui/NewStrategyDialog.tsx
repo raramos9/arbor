@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { canonicalPosition, POSITIONS, positionName, sideAfterPositionChange, type Position, type PositionId } from '../model/positions';
+import { canonicalPosition, POSITIONS, pairSide, positionName, sideAfterPositionChange, type Position, type PositionId } from '../model/positions';
 import { createStrategy, RulesetSchema, SideSchema, type Result, type Ruleset, type Side } from '../model/strategy';
 import { editorHref, navigate } from '../route';
 import { saveStrategy } from '../storage';
@@ -12,7 +12,7 @@ const RULESET_LABEL: Record<Ruleset, string> = { gi: 'Gi', 'no-gi': 'No-gi', bot
 
 export function openNewStrategy(args: Parameters<typeof createStrategy>[0]): Result<null> {
 	const choice = args.position?.kind === 'listed' ? args.position.id : 'other';
-	const doc = createStrategy({ ...args, startingSide: sideAfterPositionChange(args.startingSide, choice) });
+	const doc = createStrategy({ ...args, startingSide: pairSide(args.startingSide, choice) });
 	const saved = saveStrategy(doc);
 	if (saved.ok) navigate(editorHref(doc.id));
 	return saved;
@@ -34,7 +34,7 @@ export function NewStrategyDialog({ initial, onClose }: { initial: PositionId; o
 			: { kind: 'listed', id: choice };
 	// A typed name matching a listed position follows that position's side rule.
 	const effective = position?.kind === 'listed' ? position.id : choice;
-	const startSide = sideAfterPositionChange(side, effective);
+	const startSide = pairSide(side, effective);
 	// Until the user types a title, it follows the chosen position so Create is ready once one is picked.
 	const suggestedTitle = position ? `${positionName(position)} game plan` : '';
 	const title = typedTitle ?? suggestedTitle;

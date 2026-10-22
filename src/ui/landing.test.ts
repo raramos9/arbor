@@ -24,9 +24,10 @@ describe('planFromTyped', () => {
 		});
 	});
 
-	it('follows the shared side rule: standing only for Standing, bottom otherwise', () => {
+	it('starts on the side the position is usually played from', () => {
+		expect(planFromTyped('mount').startingSide).toBe('top');
 		expect(planFromTyped('Standing').startingSide).toBe('standing');
-		expect(planFromTyped('Mount').startingSide).toBe('bottom');
+		expect(planFromTyped('Turtle').startingSide).toBe('bottom');
 		expect(planFromTyped('Crucifix').startingSide).toBe('bottom');
 	});
 
@@ -98,6 +99,7 @@ describe('hero graph', () => {
 	it('names the root after what the visitor types', () => {
 		expect(heroStart('')).toEqual({ name: 'Closed guard', side: 'bottom' });
 		expect(heroStart('standing')).toEqual({ name: 'Standing', side: 'standing' });
+		expect(heroStart('mount')).toEqual({ name: 'Mount', side: 'top' });
 		expect(heroStart('Crucifix')).toEqual({ name: 'Crucifix', side: 'bottom' });
 		expect(heroGraph('wide', 'half guard').nodes.find((n) => n.tone === 'start')?.name).toBe('Half guard');
 	});
