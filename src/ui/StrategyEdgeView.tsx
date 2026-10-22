@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext } from 'react';
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, Position, useStore, type EdgeProps, type ReactFlowState } from '@xyflow/react';
 import { EdgeIdSchema, NodeIdSchema } from '../model/strategy';
-import { forkPoint, type EdgeFork, type StrategyFlowEdge } from './flow';
+import { forkPoint, pillKeyAction, type EdgeFork, type StrategyFlowEdge } from './flow';
 import { InlineEditContext, InlineInput } from './InlineEdit';
 import { PlayIcon } from './PlayIcon';
 
@@ -53,7 +53,7 @@ export function StrategyEdgeView({
 	const words = data?.label ?? '';
 	const label = fork && !fork.leader ? '' : words;
 	const hasMedia = (data?.mediaCount ?? 0) > 0;
-	const pillSelected = fork ? fork.selected : selected;
+	const pillSelected = fork ? fork.selected : selected === true;
 	const editing = data?.editing ?? false;
 	const position = { transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` };
 	const dash = words === '' ? { strokeDasharray: '5 4' } : {};
@@ -118,6 +118,12 @@ export function StrategyEdgeView({
 							selectReaction(id);
 						}}
 						onDoubleClick={() => start({ type: 'edge', id: EdgeIdSchema.parse(id) })}
+						onKeyDown={(e) => {
+							if (pillKeyAction(e, pillSelected) !== 'rename') return;
+							e.preventDefault();
+							e.stopPropagation();
+							start({ type: 'edge', id: EdgeIdSchema.parse(id) });
+						}}
 					>
 						{label !== '' && <span className="edge-pill-text">{label}</span>}
 						{hasMedia && <PlayIcon />}
