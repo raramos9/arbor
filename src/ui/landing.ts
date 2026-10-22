@@ -285,10 +285,19 @@ const HERO_LANES: { label: string; doc: StrategyDoc | null }[] = [
 
 export const HERO_FALLBACK = 'Closed guard';
 
+// The hero's own branch starts from what the visitor typed, or from the position the hero already shows.
+export function heroTyped(typed: string): string {
+	return typed.trim() === '' ? HERO_FALLBACK : typed;
+}
+
 export function heroStart(typed: string): { name: string; side: Side } {
-	const plan = planFromTyped(typed);
-	if (!plan.position) return { name: HERO_FALLBACK, side: 'bottom' };
-	return { name: positionName(plan.position), side: plan.startingSide };
+	const plan = planFromTyped(heroTyped(typed));
+	return { name: plan.position ? positionName(plan.position) : HERO_FALLBACK, side: plan.startingSide };
+}
+
+// X-guard is said "ex-guard", so it takes "an" like a vowel.
+export function withArticle(phrase: string): string {
+	return `${/^([aeiou]|x-)/i.test(phrase) ? 'an' : 'a'} ${phrase}`;
 }
 
 // "Closed guard" reads as "closed guard" mid-sentence, but a name written in title case ("De La Riva") keeps its capitals.

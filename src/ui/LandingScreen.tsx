@@ -14,7 +14,9 @@ import {
 	FORK_ADDED,
 	heroGraph,
 	heroStart,
+	heroTyped,
 	inSentence,
+	withArticle,
 	planFromTyped,
 	POSITION_NAME_LIMIT,
 	treeGraph,
@@ -86,7 +88,7 @@ function Hero({ inputRef, start }: { inputRef: RefObject<HTMLInputElement>; star
 	const [failed, setFailed] = useState<string | null>(null);
 	const rootName = heroStart(typed).name;
 	const startYours = () => {
-		const opened = start(typed);
+		const opened = start(heroTyped(typed));
 		setFailed(opened.ok ? null : opened.error);
 	};
 	return (
@@ -96,8 +98,8 @@ function Hero({ inputRef, start }: { inputRef: RefObject<HTMLInputElement>; star
 					Everyone has a plan from <em>closed guard</em>. Where’s yours?
 				</h1>
 				<p className="lede">
-					Map what you do, how he reacts, and what you do next. Then line your plan up against everyone else’s from the
-					same position.
+					Map what you do, how he reacts, and what you do next.
+					{cloud && ' Then line your plan up against everyone else’s from the same position.'}
 				</p>
 				<StartField inputRef={inputRef} start={start} onType={setTyped} />
 			</div>
@@ -257,7 +259,7 @@ function PlanGraph({ graph, className = '', animated = false, lit = null, maxSca
 							type="button"
 							className={classes}
 							style={style}
-							aria-label={`${n.name}: start a ${inSentence(root?.name ?? '')} plan`}
+							aria-label={`${n.name}: start ${withArticle(inSentence(root?.name ?? ''))} plan`}
 							onClick={onStartYours}
 						>
 							<PlusIcon size={14} />
@@ -388,7 +390,7 @@ function ShareSection() {
 	return (
 		<section className="landing-section share-section" aria-labelledby="share-title">
 			<div className="section-copy">
-				<h2 id="share-title">Publish a link. Fork someone else’s plan.</h2>
+				<h2 id="share-title">{cloud ? 'Publish a link. Fork someone else’s plan.' : 'Your plans stay in this browser.'}</h2>
 				{cloud ? (
 					<p>
 						Anyone can open a published plan by its link, no account needed. Sign in to publish yours, or to fork a plan
