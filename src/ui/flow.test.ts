@@ -126,6 +126,27 @@ describe('settleSelection', () => {
 	it('falls back to the survivor when the group shrinks to one', () => {
 		expect(settleSelection(armDragDoc(), { type: 'reaction', id: eid('e2') })).toEqual({ type: 'edge', id: 'e2' });
 	});
+	it('follows the next outcome when the leader edge goes', () => {
+		const before = sharedReactionDoc();
+		before.nodes['armbar'] = { id: NodeIdSchema.parse('armbar'), name: 'Armbar', notes: '', media: [] };
+		before.edges['e4'] = { ...before.edges['e2']!, id: eid('e4'), to: NodeIdSchema.parse('armbar') };
+		const after = structuredClone(before);
+		delete after.edges['e2'];
+		expect(settleSelection(after, { type: 'reaction', id: eid('e2') }, before)).toEqual({ type: 'reaction', id: 'e3' });
+	});
+	it('becomes the last outcome’s connection when only one is left', () => {
+		const before = sharedReactionDoc();
+		const after = structuredClone(before);
+		delete after.edges['e2'];
+		expect(settleSelection(after, { type: 'reaction', id: eid('e2') }, before)).toEqual({ type: 'edge', id: 'e3' });
+	});
+	it('drops a reaction when every outcome is gone', () => {
+		const before = sharedReactionDoc();
+		const after = structuredClone(before);
+		delete after.edges['e2'];
+		delete after.edges['e3'];
+		expect(settleSelection(after, { type: 'reaction', id: eid('e2') }, before)).toBeNull();
+	});
 	it('drops a selection whose target is gone', () => {
 		expect(settleSelection(armDragDoc(), { type: 'reaction', id: eid('ghost') })).toBeNull();
 		expect(settleSelection(armDragDoc(), { type: 'edge', id: eid('ghost') })).toBeNull();
