@@ -52,11 +52,28 @@ export function loadStrategy(id: string): Result<StrategyDoc> {
 	return parsed.ok ? parsed : { ok: false, error: `Stored data is corrupt: ${parsed.error}` };
 }
 
-export function saveStrategy(doc: StrategyDoc): Result<null> {
+export type SaveFailure = 'full' | 'blocked';
+
+export type SaveResult = { ok: true; value: null } | { ok: false; reason: SaveFailure; error: string };
+
+const SAVE_ERROR: Record<SaveFailure, string> = {
+	full: 'Could not save: this browser’s storage for Arbor is full. Delete a plan you no longer need, then try again.',
+	blocked: 'Could not save: site storage is blocked or unavailable. Allow site storage for this page, then try again.',
+};
+
+// Browsers name a full quota differently: QuotaExceededError (code 22) in most, NS_ERROR_DOM_QUOTA_REACHED (1014) in old Firefox.
+export function saveFailure(e: unknown): SaveFailure {
+	if (!(e instanceof DOMException)) return 'blocked';
+	const full = e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22 || e.code === 1014;
+	return full ? 'full' : 'blocked';
+}
+
+export function saveStrategy(doc: StrategyDoc): SaveResult {
 	try {
 		localStorage.setItem(PREFIX + doc.id, JSON.stringify(doc));
 		return { ok: true, value: null };
 	} catch (e) {
-		return { ok: false, error: `Could not save: ${describe(e)}` };
+		const reason = saveFailure(e);
+		return { ok: false, reason, error: SAVE_ERROR[reason] };
 	}
 }

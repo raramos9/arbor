@@ -130,7 +130,7 @@ function StartField({ inputRef, start, onType }: { inputRef?: RefObject<HTMLInpu
 	function onSubmit(e: FormEvent) {
 		e.preventDefault();
 		const opened = start(typed);
-		setError(opened.ok ? null : `${opened.error} Allow site storage for this page, then try again.`);
+		setError(opened.ok ? null : opened.error);
 	}
 
 	return (
