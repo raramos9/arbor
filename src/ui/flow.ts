@@ -1,5 +1,5 @@
 import { MarkerType, type Edge, type Node } from '@xyflow/react';
-import { reactionGroup, type StrategyDoc, type StrategyEdge } from '../model/strategy';
+import { reactionGroup, reactionKey, type StrategyDoc, type StrategyEdge } from '../model/strategy';
 import type { EdgeId, NodeId } from '../model/strategy';
 
 // A reaction selection names the group by its leader edge; the members are recomputed so the selection never goes stale.
@@ -87,17 +87,27 @@ export function selectedEdgeIds(doc: StrategyDoc, selection: Selection): Set<Edg
 	return new Set();
 }
 
-// Keeps the selection pointing at something that still exists.
+// Keeps the selection pointing at something that still exists. `before` is the doc the selection was made in.
+// A reaction whose leader is gone follows the next outcome that still shares its words.
 // A reaction that has shrunk to one outcome becomes that outcome's connection, unless its words were just cleared.
-export function settleSelection(doc: StrategyDoc, selection: Selection): Selection {
+export function settleSelection(doc: StrategyDoc, selection: Selection, before: StrategyDoc = doc): Selection {
 	if (!selection) return selection;
 	if (selection.type === 'node') return doc.nodes[selection.id] ? selection : null;
-	const leader = doc.edges[selection.id];
+	const id = selection.type === 'reaction' ? reactionLeader(doc, before, selection.id) : selection.id;
+	const leader = id ? doc.edges[id] : undefined;
 	if (!leader) return null;
-	if (selection.type === 'reaction' && leader.label !== '' && reactionGroup(doc, selection.id).length < 2) {
-		return { type: 'edge', id: selection.id };
+	if (selection.type === 'reaction' && leader.label !== '' && reactionGroup(doc, leader.id).length < 2) {
+		return { type: 'edge', id: leader.id };
 	}
-	return selection;
+	return leader.id === selection.id ? selection : { type: 'reaction', id: leader.id };
+}
+
+function reactionLeader(doc: StrategyDoc, before: StrategyDoc, id: EdgeId): EdgeId | null {
+	if (doc.edges[id]) return id;
+	const gone = before.edges[id];
+	const key = gone ? reactionKey(gone.label) : '';
+	if (!gone || key === '') return null;
+	return Object.values(doc.edges).find((edge) => edge.from === gone.from && reactionKey(edge.label) === key)?.id ?? null;
 }
 
 export type PillKey = { key: string; metaKey: boolean; ctrlKey: boolean; altKey: boolean };

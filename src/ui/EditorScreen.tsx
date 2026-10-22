@@ -135,8 +135,10 @@ function Editor({ initial }: { initial: StrategyDoc }) {
 		return () => clearTimeout(timer);
 	}, [notice]);
 
+	const settledDoc = useRef(doc);
 	useEffect(() => {
-		const settled = settleSelection(doc, selection);
+		const settled = settleSelection(doc, selection, settledDoc.current);
+		settledDoc.current = doc;
 		if (settled !== selection) setSelection(settled);
 	}, [doc, selection]);
 
