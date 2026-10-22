@@ -107,11 +107,10 @@ export function StrategyEdgeView({
 				<EdgeLabelRenderer>
 					<button
 						type="button"
-						tabIndex={-1}
 						className={`edge-pill nodrag nopan${pillSelected ? ' selected' : ''}`}
 						style={position}
 						title={label || undefined}
-						aria-label={fork ? `Reaction: ${label}, ${fork.targets.length} outcomes` : undefined}
+						aria-label={pillName(label, fork)}
 						onClick={(e) => {
 							// The pill is portaled but still bubbles to React Flow's edge click, which would select this one outcome.
 							e.stopPropagation();
@@ -122,6 +121,7 @@ export function StrategyEdgeView({
 							if (pillKeyAction(e, pillSelected) !== 'rename') return;
 							e.preventDefault();
 							e.stopPropagation();
+							if (!pillSelected) selectReaction(id);
 							start({ type: 'edge', id: EdgeIdSchema.parse(id) });
 						}}
 					>
@@ -132,6 +132,11 @@ export function StrategyEdgeView({
 			)}
 		</>
 	);
+}
+
+function pillName(label: string, fork: EdgeFork | null): string {
+	const words = label === '' ? 'Reaction with clips' : `Reaction: ${label}`;
+	return fork ? `${words}, ${fork.targets.length} outcomes` : words;
 }
 
 // The average of the targets' top handles, as a string so the store only re-renders this edge when it moves.
