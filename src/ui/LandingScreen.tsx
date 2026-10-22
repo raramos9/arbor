@@ -4,6 +4,7 @@ import type { Result, StrategyDoc } from '../model/strategy';
 import { exploreHref } from '../route';
 import { cloud } from '../supabase';
 import { AccountControl } from './AccountControl';
+import { CardPreview } from './CardPreview';
 import { PlusIcon } from './Icons';
 import {
 	EXAMPLE_A,
@@ -21,10 +22,10 @@ import {
 	type GraphEdge,
 	type GraphNode,
 } from './landing';
-import { miniTree } from './miniTree';
+import { miniTree, RULESET_LABEL } from './miniTree';
 import { MiniTreeView } from './MiniTreeView';
 import { openNewStrategy } from './NewStrategyDialog';
-import { previewLines, reactionPhrase, toOutline, type OutlineStep } from './outline';
+import { reactionPhrase, toOutline, type OutlineStep } from './outline';
 import './landing.css';
 
 const EXAMPLES_NOTE = 'Example plans are illustrations, not real users.';
@@ -335,27 +336,14 @@ function LinesSection() {
 
 function ExampleCard({ doc }: { doc: StrategyDoc }) {
 	const outline = toOutline(doc);
-	const { lines, more } = previewLines(outline, 3);
+	const previewId = useId();
 	return (
 		<li className="card">
-			<MiniTreeView tree={miniTree(outline)} ruleset={doc.ruleset} />
+			<MiniTreeView tree={miniTree(outline)} />
 			<div className="card-body">
 				<h3 className="card-title">{doc.title}</h3>
-				<ol className="preview">
-					{lines.map((line, index) => (
-						<li key={index} style={{ paddingLeft: line.depth * 10 }}>
-							{'options' in line ? (
-								<em>{line.phrase}</em>
-							) : (
-								<>
-									{line.phrase && <em>{line.phrase} </em>}
-									{line.name}
-								</>
-							)}
-						</li>
-					))}
-					{more > 0 && <li className="preview-more">+{more} more</li>}
-				</ol>
+				<p className="card-start">{RULESET_LABEL[doc.ruleset]}</p>
+				<CardPreview id={previewId} outline={outline} />
 			</div>
 			<div className="card-foot">
 				<span>Example</span>
