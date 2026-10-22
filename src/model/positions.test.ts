@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { otherChoice, pairSide, POSITIONS, sideAfterOtherNameChange, sideAfterPositionChange, startLabel } from './positions';
+import { canonicalPosition, otherChoice, pairSide, POSITIONS, sideAfterOtherNameChange, sideAfterPositionChange, startLabel } from './positions';
 
 describe('startLabel', () => {
 	it('pairs the position with the side', () => {
@@ -35,6 +35,37 @@ describe('sideAfterPositionChange', () => {
 
 	it('gives only Standing the standing side', () => {
 		for (const p of POSITIONS) expect(p.usualSide === 'standing').toBe(p.id === 'standing');
+	});
+});
+
+describe('canonicalPosition', () => {
+	const listed = (name: string) => canonicalPosition({ kind: 'other', name });
+
+	it('matches names and aliases regardless of case, spacing and hyphens', () => {
+		expect(listed('back')).toEqual({ kind: 'listed', id: 'back' });
+		expect(listed(' Back  Mount ')).toEqual({ kind: 'listed', id: 'back' });
+		expect(listed('DLR')).toEqual({ kind: 'listed', id: 'de-la-riva' });
+		expect(listed('slx')).toEqual({ kind: 'listed', id: 'single-leg-x' });
+		expect(listed('KOB')).toEqual({ kind: 'listed', id: 'knee-on-belly' });
+		expect(listed('n/s')).toEqual({ kind: 'listed', id: 'north-south' });
+		expect(listed('ns')).toEqual({ kind: 'listed', id: 'north-south' });
+		expect(listed('north south')).toEqual({ kind: 'listed', id: 'north-south' });
+		expect(listed('x guard')).toEqual({ kind: 'listed', id: 'x-guard' });
+		expect(listed('side')).toEqual({ kind: 'listed', id: 'side-control' });
+		expect(listed('half')).toEqual({ kind: 'listed', id: 'half-guard' });
+		expect(listed('closed')).toEqual({ kind: 'listed', id: 'closed-guard' });
+		expect(listed('butterfly')).toEqual({ kind: 'listed', id: 'butterfly-guard' });
+		expect(listed('Spider')).toEqual({ kind: 'listed', id: 'spider-guard' });
+	});
+
+	it('keeps an unmatched name as typed', () => {
+		expect(listed('Crucifix')).toEqual({ kind: 'other', name: 'Crucifix' });
+		expect(listed('backside')).toEqual({ kind: 'other', name: 'backside' });
+	});
+
+	it('gives every name and alias exactly one position', () => {
+		const keys = POSITIONS.flatMap((p) => [p.name, ...p.aliases].map((n) => n.toLowerCase().replace(/[\s-]+/g, ' ')));
+		expect(new Set(keys).size).toBe(keys.length);
 	});
 });
 
