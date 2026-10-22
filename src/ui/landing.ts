@@ -1,4 +1,4 @@
-import { canonicalPosition, positionName, type Position, type PositionId } from '../model/positions';
+import { canonicalPosition, positionName, sideAfterPositionChange, type Position } from '../model/positions';
 import {
 	EdgeIdSchema,
 	NodeIdSchema,
@@ -12,23 +12,6 @@ import { reactionPhrase, toOutline, type OutlineStep } from './outline';
 
 export type PlanStart = { title: string; position: Position | null; startingSide: Side };
 
-const SIDE: Record<PositionId, Side> = {
-	standing: 'standing',
-	'closed-guard': 'bottom',
-	'half-guard': 'bottom',
-	'butterfly-guard': 'bottom',
-	'de-la-riva': 'bottom',
-	'spider-guard': 'bottom',
-	'x-guard': 'bottom',
-	'single-leg-x': 'bottom',
-	'side-control': 'top',
-	mount: 'top',
-	back: 'top',
-	turtle: 'top',
-	'north-south': 'top',
-	'knee-on-belly': 'top',
-};
-
 export const POSITION_NAME_LIMIT = 60;
 
 export function planFromTyped(typed: string): PlanStart {
@@ -38,7 +21,7 @@ export function planFromTyped(typed: string): PlanStart {
 	return {
 		title: `${positionName(position)} game plan`,
 		position,
-		startingSide: position.kind === 'listed' ? SIDE[position.id] : 'bottom',
+		startingSide: sideAfterPositionChange('bottom', position.kind === 'listed' ? position.id : 'other'),
 	};
 }
 

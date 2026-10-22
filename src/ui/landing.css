@@ -171,7 +171,8 @@ button.g-node.yours:focus-visible { outline: 2px solid var(--accent); outline-of
   font-weight: 600;
   white-space: nowrap;
 }
-.flow-down .g-lane { transform: translate(-50%, -50%); padding: 0 4px; background: var(--bg); }
+.g-lane { padding: 0 4px; margin-left: -4px; background: var(--bg); }
+.flow-down .g-lane { transform: translate(-50%, -50%); margin-left: 0; }
 .g-lane.yours { color: var(--accent); }
 
 /* The wide hero is drawn near 1:1 beside the headline, so its type is set at reading size, not thumbnail size. */
