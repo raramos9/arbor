@@ -97,80 +97,6 @@ export type Graph = {
 	lanes: GraphLane[];
 };
 
-const node = (n: Omit<GraphNode, 'end' | 'tone'> & Partial<Pick<GraphNode, 'end' | 'tone'>>): GraphNode => ({
-	tone: 'step',
-	end: false,
-	...n,
-});
-const edge = (from: string, to: string, pill: string | null, beat: number, extra: Partial<GraphEdge> = {}): GraphEdge => ({
-	id: `${from}-${to}`,
-	from,
-	to,
-	pill,
-	dashed: pill === 'then',
-	yours: false,
-	beat,
-	...extra,
-});
-
-const ROOT_META = 'bottom · gi';
-
-// The hero merges several people's plans under one root, so it is laid out by hand rather than from one doc.
-export const HERO_WIDE: Graph = {
-	width: 790,
-	height: 620,
-	flow: 'right',
-	nodes: [
-		node({ id: 'root', name: 'Closed guard', meta: ROOT_META, x: 112, y: 320, w: 204, tone: 'start', beat: 0 }),
-		node({ id: 'a', name: 'Break posture', x: 420, y: 110, w: 170, beat: 1 }),
-		node({ id: 'a1', name: 'Scissor sweep', x: 700, y: 52, w: 164, end: true, beat: 2 }),
-		node({ id: 'a2', name: 'Cross collar choke', x: 700, y: 168, w: 164, end: true, beat: 2 }),
-		node({ id: 'b', name: 'Hip bump', x: 420, y: 320, w: 170, beat: 1 }),
-		node({ id: 'b1', name: 'Kimura', x: 700, y: 262, w: 164, end: true, beat: 2 }),
-		node({ id: 'b2', name: 'Guillotine', x: 700, y: 378, w: 164, end: true, beat: 2 }),
-		node({ id: 'you', name: 'Your first move', x: 420, y: 530, w: 170, tone: 'yours', beat: 4 }),
-	],
-	edges: [
-		edge('root', 'a', null, 1),
-		edge('root', 'b', null, 1),
-		edge('a', 'a1', 'if he postures', 2),
-		edge('a', 'a2', 'then', 2),
-		edge('b', 'b1', 'if he posts', 2),
-		edge('b', 'b2', 'if he leans in', 2),
-		edge('root', 'you', null, 3, { yours: true }),
-	],
-	lanes: [
-		{ id: 'la', text: 'Example plan A', x: 335, y: 72, yours: false, beat: 1 },
-		{ id: 'lb', text: 'Example plan B', x: 335, y: 282, yours: false, beat: 1 },
-		{ id: 'lc', text: 'Your plan', x: 335, y: 492, yours: true, beat: 3 },
-	],
-};
-
-export const HERO_TALL: Graph = {
-	width: 372,
-	height: 372,
-	flow: 'down',
-	nodes: [
-		node({ id: 'root', name: 'Closed guard', meta: ROOT_META, x: 186, y: 34, w: 190, tone: 'start', beat: 0 }),
-		node({ id: 'a', name: 'Break posture', x: 64, y: 160, w: 116, beat: 1 }),
-		node({ id: 'a1', name: 'Scissor sweep', x: 64, y: 300, w: 116, end: true, beat: 2 }),
-		node({ id: 'b', name: 'Hip bump', x: 186, y: 160, w: 116, beat: 1 }),
-		node({ id: 'b1', name: 'Kimura', x: 186, y: 300, w: 116, end: true, beat: 2 }),
-		node({ id: 'you', name: 'Your first move', x: 308, y: 160, w: 116, tone: 'yours', beat: 4 }),
-	],
-	edges: [
-		edge('root', 'a', null, 1),
-		edge('root', 'b', null, 1),
-		edge('a', 'a1', 'if he postures', 2),
-		edge('b', 'b1', 'if he posts', 2),
-		edge('root', 'you', null, 3, { yours: true }),
-	],
-	lanes: [
-		{ id: 'la', text: 'Example plan A', x: 64, y: 122, yours: false, beat: 1 },
-		{ id: 'lb', text: 'Example plan B', x: 186, y: 122, yours: false, beat: 1 },
-		{ id: 'lc', text: 'Your plan', x: 308, y: 122, yours: true, beat: 3 },
-	],
-};
 
 type Branch = { name: string; via?: string; next?: Branch[] };
 
@@ -216,7 +142,7 @@ export const EXAMPLE_A = exampleDoc('Example plan A', {
 			name: 'Break posture',
 			next: [
 				{ name: 'Scissor sweep', via: 'he postures' },
-				{ name: 'Cross collar choke', next: [{ name: 'Armbar', via: 'he defends' }] },
+				{ name: 'Cross collar choke' },
 			],
 		},
 	],
@@ -316,4 +242,120 @@ export function treeGraph(doc: StrategyDoc, { columnGap, rowGap, nodeWidth, pad,
 		edges,
 		lanes: [],
 	};
+}
+
+type Slot = { x: number; y: number; w: number };
+type HeroFrame = {
+	width: number;
+	height: number;
+	flow: Graph['flow'];
+	root: Slot;
+	heads: [Slot, Slot, Slot];
+	yoursWidth: number;
+	leafOffsets: number[];
+	leafX: number | null;
+	leafWidth: number;
+	labelGap: number;
+};
+
+// Units are roughly CSS pixels at the size each frame is drawn; the wide frame sits beside the headline, the tall one under it on phones.
+const FRAMES: Record<'wide' | 'tall', HeroFrame> = {
+	wide: {
+		width: 815,
+		height: 700,
+		flow: 'right',
+		root: { x: 95, y: 350, w: 190 },
+		heads: [
+			{ x: 372, y: 100, w: 184 },
+			{ x: 372, y: 350, w: 184 },
+			{ x: 390, y: 600, w: 220 },
+		],
+		yoursWidth: 220,
+		leafOffsets: [-66, 66],
+		leafX: 712,
+		leafWidth: 196,
+		labelGap: 48,
+	},
+	tall: {
+		width: 372,
+		height: 400,
+		flow: 'down',
+		root: { x: 186, y: 34, w: 190 },
+		heads: [
+			{ x: 64, y: 180, w: 116 },
+			{ x: 186, y: 180, w: 116 },
+			{ x: 308, y: 180, w: 116 },
+		],
+		yoursWidth: 116,
+		leafOffsets: [140],
+		leafX: null,
+		leafWidth: 116,
+		labelGap: 40,
+	},
+};
+
+const HERO_LANES: { label: string; doc: StrategyDoc | null }[] = [
+	{ label: 'Example plan A', doc: EXAMPLE_A },
+	{ label: 'Example plan B', doc: EXAMPLE_B },
+	{ label: 'Your plan', doc: null },
+];
+
+export const HERO_FALLBACK = 'Closed guard';
+
+export function heroStart(typed: string): { name: string; side: Side } {
+	const plan = planFromTyped(typed);
+	if (!plan.position) return { name: HERO_FALLBACK, side: 'bottom' };
+	return { name: positionName(plan.position), side: plan.startingSide };
+}
+
+// "Closed guard" reads as "closed guard" mid-sentence, but a name written in title case ("De La Riva") keeps its capitals.
+export function inSentence(name: string): string {
+	const words = name.split(' ');
+	if (words.length > 1 && words.every((word) => /^[A-Z]/.test(word))) return name;
+	return name.charAt(0).toLowerCase() + name.slice(1);
+}
+
+// The hero merges several example plans under one shared root; each lane is drawn from its doc so it says what the doc says.
+export function heroGraph(frameName: 'wide' | 'tall', typed: string): Graph {
+	const frame = FRAMES[frameName];
+	const start = heroStart(typed);
+	const nodes: GraphNode[] = [
+		{ id: 'root', name: start.name, meta: start.side, ...frame.root, tone: 'start', end: false, beat: 0 },
+	];
+	const edges: GraphEdge[] = [];
+	const lanes: GraphLane[] = [];
+	HERO_LANES.forEach((lane, index) => {
+		const slot = frame.heads[index]!;
+		const yours = lane.doc === null;
+		const width = yours ? frame.yoursWidth : slot.w;
+		lanes.push({
+			id: `lane-${index}`,
+			text: lane.label,
+			x: frame.flow === 'right' ? slot.x - width / 2 : slot.x,
+			y: slot.y - frame.labelGap,
+			yours,
+			beat: yours ? 3 : 1,
+		});
+		if (lane.doc === null) {
+			nodes.push({ id: 'yours', name: 'Your first move', ...slot, w: width, tone: 'yours', end: false, beat: 4 });
+			edges.push({ id: 'root-yours', from: 'root', to: 'yours', pill: null, dashed: false, yours: true, beat: 3 });
+			return;
+		}
+		const head = toOutline(lane.doc).start.next.find((entry): entry is OutlineStep => entry.kind === 'step');
+		if (!head) return;
+		const leaves = head.next.filter((entry): entry is OutlineStep => entry.kind === 'step').slice(0, frame.leafOffsets.length);
+		nodes.push({ id: head.node, name: head.name, ...slot, tone: 'step', end: leaves.length === 0, beat: 1 });
+		edges.push(graphEdge('root', head, 1));
+		leaves.forEach((leaf, leafIndex) => {
+			const offset = frame.leafOffsets[leafIndex]!;
+			nodes.push({ id: leaf.node, name: leaf.name, x: frame.leafX ?? slot.x, y: slot.y + offset, w: frame.leafWidth, tone: 'step', end: leaf.next.length === 0, beat: 2 });
+			edges.push(graphEdge(head.node, leaf, 2));
+		});
+	});
+	return { width: frame.width, height: frame.height, flow: frame.flow, nodes, edges, lanes };
+}
+
+function graphEdge(from: string, to: OutlineStep, beat: number): GraphEdge {
+	const reaction = to.reaction.trim();
+	return { id: to.edge ?? to.node, from, to: to.node, pill: reactionPhrase(reaction), dashed: reaction === '', yours: false, beat };
 }
