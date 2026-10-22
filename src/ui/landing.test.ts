@@ -33,6 +33,15 @@ describe('planFromTyped', () => {
 		expect(planFromTyped('Crucifix').startingSide).toBe('bottom');
 	});
 
+	it('matches the shorthand people type for a curated position', () => {
+		expect(planFromTyped('dlr')).toEqual({
+			title: 'De La Riva game plan',
+			position: { kind: 'listed', id: 'de-la-riva' },
+			startingSide: 'bottom',
+		});
+		expect(planFromTyped('Back')).toMatchObject({ title: 'Back control game plan', startingSide: 'top' });
+	});
+
 	it('keeps an unlisted position in the visitor’s words', () => {
 		expect(planFromTyped('Crucifix')).toEqual({
 			title: 'Crucifix game plan',

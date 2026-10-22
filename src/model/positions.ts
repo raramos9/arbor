@@ -2,20 +2,20 @@ import { z } from 'zod';
 import type { Side } from './strategy';
 
 export const POSITIONS = [
-	{ id: 'standing', name: 'Standing', usualSide: 'standing' },
-	{ id: 'closed-guard', name: 'Closed guard', usualSide: 'bottom' },
-	{ id: 'half-guard', name: 'Half guard', usualSide: 'bottom' },
-	{ id: 'butterfly-guard', name: 'Butterfly guard', usualSide: 'bottom' },
-	{ id: 'de-la-riva', name: 'De La Riva', usualSide: 'bottom' },
-	{ id: 'spider-guard', name: 'Spider guard', usualSide: 'bottom' },
-	{ id: 'x-guard', name: 'X-guard', usualSide: 'bottom' },
-	{ id: 'single-leg-x', name: 'Single leg X', usualSide: 'bottom' },
-	{ id: 'side-control', name: 'Side control', usualSide: 'top' },
-	{ id: 'mount', name: 'Mount', usualSide: 'top' },
-	{ id: 'back', name: 'Back control', usualSide: 'top' },
-	{ id: 'turtle', name: 'Turtle', usualSide: 'bottom' },
-	{ id: 'north-south', name: 'North-south', usualSide: 'top' },
-	{ id: 'knee-on-belly', name: 'Knee on belly', usualSide: 'top' },
+	{ id: 'standing', name: 'Standing', usualSide: 'standing', aliases: [] },
+	{ id: 'closed-guard', name: 'Closed guard', usualSide: 'bottom', aliases: ['closed', 'full guard'] },
+	{ id: 'half-guard', name: 'Half guard', usualSide: 'bottom', aliases: ['half'] },
+	{ id: 'butterfly-guard', name: 'Butterfly guard', usualSide: 'bottom', aliases: ['butterfly'] },
+	{ id: 'de-la-riva', name: 'De La Riva', usualSide: 'bottom', aliases: ['dlr', 'de la riva guard'] },
+	{ id: 'spider-guard', name: 'Spider guard', usualSide: 'bottom', aliases: ['spider'] },
+	{ id: 'x-guard', name: 'X-guard', usualSide: 'bottom', aliases: [] },
+	{ id: 'single-leg-x', name: 'Single leg X', usualSide: 'bottom', aliases: ['slx'] },
+	{ id: 'side-control', name: 'Side control', usualSide: 'top', aliases: ['side', 'side mount'] },
+	{ id: 'mount', name: 'Mount', usualSide: 'top', aliases: ['full mount'] },
+	{ id: 'back', name: 'Back control', usualSide: 'top', aliases: ['back', 'back mount'] },
+	{ id: 'turtle', name: 'Turtle', usualSide: 'bottom', aliases: [] },
+	{ id: 'north-south', name: 'North-south', usualSide: 'top', aliases: ['ns', 'n/s'] },
+	{ id: 'knee-on-belly', name: 'Knee on belly', usualSide: 'top', aliases: ['kob'] },
 ] as const;
 
 const [first, ...rest] = POSITIONS;
@@ -35,11 +35,19 @@ export function positionName(position: Position): string {
 	return POSITIONS.find((p) => p.id === position.id)?.name ?? position.id;
 }
 
+// "X guard", "x-guard" and "X-Guard" all name the same position.
+function matchKey(name: string): string {
+	return name.trim().toLowerCase().replace(/[\s-]+/g, ' ');
+}
+
+const LISTED_BY_NAME = new Map<string, PositionId>(
+	POSITIONS.flatMap((p) => [p.name, ...p.aliases].map((name) => [matchKey(name), p.id] as const)),
+);
+
 export function canonicalPosition(position: Position): Position {
 	if (position.kind === 'listed') return position;
-	const typed = position.name.trim().toLowerCase();
-	const listed = POSITIONS.find((p) => p.name.toLowerCase() === typed);
-	return listed ? { kind: 'listed', id: listed.id } : position;
+	const id = LISTED_BY_NAME.get(matchKey(position.name));
+	return id ? { kind: 'listed', id } : position;
 }
 
 export function startLabel(position: Position, side: Side): string {
