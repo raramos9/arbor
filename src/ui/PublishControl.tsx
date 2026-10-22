@@ -7,7 +7,7 @@ import { findMine, publish, unpublish } from '../publishing';
 import { publishedHref } from '../route';
 import { Dialog } from './Dialog';
 import { HandleDialog } from './HandleDialog';
-import { clearPendingPublish, rememberPendingPublish, takePendingPublish } from './pendingPublish';
+import { clearPendingReturn, rememberPendingReturn, takePendingPublish } from './pendingReturn';
 import { SignInDialog } from './SignInDialog';
 import { useSession } from './useSession';
 
@@ -136,7 +136,7 @@ export function PublishControl({ client, doc }: { client: SupabaseClient<Databas
 	function onPublishClick() {
 		setActionError(null);
 		if (session.status === 'signed-out') {
-			rememberPendingPublish(docId);
+			rememberPendingReturn({ kind: 'publish', docId });
 			setDialog({ kind: 'signing-in' });
 		}
 		else if (session.status === 'signed-in') {
@@ -159,7 +159,7 @@ export function PublishControl({ client, doc }: { client: SupabaseClient<Databas
 						title="Sign in to publish"
 						detail={`Publishing ${doc.title.trim() ? `“${doc.title.trim()}”` : 'this strategy'} needs an account. You’ll come back here after signing in.`}
 						onClose={(started) => {
-							if (!started) clearPendingPublish();
+							if (!started) clearPendingReturn();
 							closeDialog();
 						}}
 					/>
