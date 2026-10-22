@@ -54,6 +54,17 @@ export function sideAfterPositionChange(side: Side, choice: PositionId | 'other'
 	return listed ? listed.usualSide : pairSide(side, choice);
 }
 
+export function otherChoice(name: string): PositionId | 'other' {
+	const canonical = canonicalPosition({ kind: 'other', name });
+	return canonical.kind === 'listed' ? canonical.id : 'other';
+}
+
+// Typing a listed name into Other is the same as picking it, so the side follows only when the match changes.
+export function sideAfterOtherNameChange(side: Side, before: string, after: string): Side {
+	const next = otherChoice(after);
+	return next === otherChoice(before) ? side : sideAfterPositionChange(side, next);
+}
+
 // Standing is the only position where the standing side makes sense, and the only one it must pair with.
 export function pairSide(side: Side, choice: PositionId | 'other'): Side {
 	if (choice === 'standing') return 'standing';

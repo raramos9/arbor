@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pairSide, POSITIONS, sideAfterPositionChange, startLabel } from './positions';
+import { otherChoice, pairSide, POSITIONS, sideAfterOtherNameChange, sideAfterPositionChange, startLabel } from './positions';
 
 describe('startLabel', () => {
 	it('pairs the position with the side', () => {
@@ -35,6 +35,32 @@ describe('sideAfterPositionChange', () => {
 
 	it('gives only Standing the standing side', () => {
 		for (const p of POSITIONS) expect(p.usualSide === 'standing').toBe(p.id === 'standing');
+	});
+});
+
+describe('otherChoice', () => {
+	it('reads a typed listed name as that position', () => {
+		expect(otherChoice(' MOUNT ')).toBe('mount');
+		expect(otherChoice('Crucifix')).toBe('other');
+		expect(otherChoice('')).toBe('other');
+	});
+});
+
+describe('sideAfterOtherNameChange', () => {
+	it('applies the usual side once the typed name matches a listed position', () => {
+		expect(sideAfterOtherNameChange('bottom', 'moun', 'mount')).toBe('top');
+		expect(sideAfterOtherNameChange('top', 'closed guar', 'closed guard')).toBe('bottom');
+		expect(sideAfterOtherNameChange('bottom', 'standin', 'standing')).toBe('standing');
+	});
+
+	it('keeps a deliberate side while the match stays the same', () => {
+		expect(sideAfterOtherNameChange('bottom', 'mount', 'Mount')).toBe('bottom');
+		expect(sideAfterOtherNameChange('top', 'Crucif', 'Crucifix')).toBe('top');
+	});
+
+	it('drops standing when the typed name stops matching Standing', () => {
+		expect(sideAfterOtherNameChange('standing', 'standing', 'standingx')).toBe('bottom');
+		expect(sideAfterOtherNameChange('top', 'mount', 'mounte')).toBe('top');
 	});
 });
 

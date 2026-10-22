@@ -1,5 +1,15 @@
 import { useState, type FormEvent } from 'react';
-import { canonicalPosition, POSITIONS, pairSide, positionName, sideAfterPositionChange, type Position, type PositionId } from '../model/positions';
+import {
+	canonicalPosition,
+	otherChoice,
+	POSITIONS,
+	pairSide,
+	positionName,
+	sideAfterOtherNameChange,
+	sideAfterPositionChange,
+	type Position,
+	type PositionId,
+} from '../model/positions';
 import { createStrategy, RulesetSchema, SideSchema, type Result, type Ruleset, type Side } from '../model/strategy';
 import { editorHref, navigate } from '../route';
 import { saveStrategy } from '../storage';
@@ -42,7 +52,12 @@ export function NewStrategyDialog({ initial, onClose }: { initial: PositionId; o
 
 	function choose(next: PositionId | typeof OTHER) {
 		setChoice(next);
-		setSide((current) => sideAfterPositionChange(current, next));
+		setSide((current) => sideAfterPositionChange(current, next === OTHER ? otherChoice(otherName) : next));
+	}
+
+	function typeOther(name: string) {
+		setOtherName(name);
+		setSide((current) => sideAfterOtherNameChange(current, otherName, name));
 	}
 
 	function onSubmit(e: FormEvent) {
@@ -98,7 +113,7 @@ export function NewStrategyDialog({ initial, onClose }: { initial: PositionId; o
 					{choice === OTHER && (
 						<label>
 							Position name
-							<input value={otherName} maxLength={60} autoFocus onChange={(e) => setOtherName(e.target.value)} />
+							<input value={otherName} maxLength={60} autoFocus onChange={(e) => typeOther(e.target.value)} />
 						</label>
 					)}
 				</fieldset>
