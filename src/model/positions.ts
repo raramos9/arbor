@@ -2,20 +2,20 @@ import { z } from 'zod';
 import type { Side } from './strategy';
 
 export const POSITIONS = [
-	{ id: 'standing', name: 'Standing' },
-	{ id: 'closed-guard', name: 'Closed guard' },
-	{ id: 'half-guard', name: 'Half guard' },
-	{ id: 'butterfly-guard', name: 'Butterfly guard' },
-	{ id: 'de-la-riva', name: 'De La Riva' },
-	{ id: 'spider-guard', name: 'Spider guard' },
-	{ id: 'x-guard', name: 'X-guard' },
-	{ id: 'single-leg-x', name: 'Single leg X' },
-	{ id: 'side-control', name: 'Side control' },
-	{ id: 'mount', name: 'Mount' },
-	{ id: 'back', name: 'Back control' },
-	{ id: 'turtle', name: 'Turtle' },
-	{ id: 'north-south', name: 'North-south' },
-	{ id: 'knee-on-belly', name: 'Knee on belly' },
+	{ id: 'standing', name: 'Standing', usualSide: 'standing' },
+	{ id: 'closed-guard', name: 'Closed guard', usualSide: 'bottom' },
+	{ id: 'half-guard', name: 'Half guard', usualSide: 'bottom' },
+	{ id: 'butterfly-guard', name: 'Butterfly guard', usualSide: 'bottom' },
+	{ id: 'de-la-riva', name: 'De La Riva', usualSide: 'bottom' },
+	{ id: 'spider-guard', name: 'Spider guard', usualSide: 'bottom' },
+	{ id: 'x-guard', name: 'X-guard', usualSide: 'bottom' },
+	{ id: 'single-leg-x', name: 'Single leg X', usualSide: 'bottom' },
+	{ id: 'side-control', name: 'Side control', usualSide: 'top' },
+	{ id: 'mount', name: 'Mount', usualSide: 'top' },
+	{ id: 'back', name: 'Back control', usualSide: 'top' },
+	{ id: 'turtle', name: 'Turtle', usualSide: 'bottom' },
+	{ id: 'north-south', name: 'North-south', usualSide: 'top' },
+	{ id: 'knee-on-belly', name: 'Knee on belly', usualSide: 'top' },
 ] as const;
 
 const [first, ...rest] = POSITIONS;
@@ -48,8 +48,14 @@ export function startLabel(position: Position, side: Side): string {
 	return `${positionName(canonical)} · ${side}`;
 }
 
-// Standing is the only position where the standing side makes sense, and the only one it must pair with.
+// Picking a listed position starts you on the side it is usually played from; Other keeps a deliberate top or bottom.
 export function sideAfterPositionChange(side: Side, choice: PositionId | 'other'): Side {
+	const listed = POSITIONS.find((p) => p.id === choice);
+	return listed ? listed.usualSide : pairSide(side, choice);
+}
+
+// Standing is the only position where the standing side makes sense, and the only one it must pair with.
+export function pairSide(side: Side, choice: PositionId | 'other'): Side {
 	if (choice === 'standing') return 'standing';
 	return side === 'standing' ? 'bottom' : side;
 }
