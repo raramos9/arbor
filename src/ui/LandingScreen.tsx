@@ -1,6 +1,6 @@
-import { useId, useRef, useState, type CSSProperties, type FormEvent, type RefObject } from 'react';
+import { useCallback, useId, useRef, useState, type CSSProperties, type FormEvent, type RefObject } from 'react';
 import { POSITIONS, positionName, type PositionId } from '../model/positions';
-import type { StrategyDoc } from '../model/strategy';
+import type { Result, StrategyDoc } from '../model/strategy';
 import { exploreHref } from '../route';
 import { cloud } from '../supabase';
 import { AccountControl } from './AccountControl';
@@ -11,15 +11,15 @@ import {
 	EXAMPLE_C,
 	EXAMPLE_FORK,
 	FORK_ADDED,
-	HERO_TALL,
-	HERO_WIDE,
+	heroGraph,
+	heroStart,
+	inSentence,
 	planFromTyped,
 	POSITION_NAME_LIMIT,
 	treeGraph,
 	type Graph,
 	type GraphEdge,
 	type GraphNode,
-	type PlanStart,
 } from './landing';
 import { miniTree } from './miniTree';
 import { MiniTreeView } from './MiniTreeView';
@@ -29,12 +29,23 @@ import './landing.css';
 
 const EXAMPLES_NOTE = 'Example plans are illustrations, not real users.';
 
-function startPlan(plan: PlanStart) {
-	return openNewStrategy({ ...plan, ruleset: 'both' });
+type Start = (typed: string) => Result<null>;
+
+// Navigation waits for hashchange, so the landing stays mounted for a moment and a double click would save twice.
+function useStartOnce(): Start {
+	const started = useRef(false);
+	return useCallback((typed: string) => {
+		if (started.current) return { ok: true, value: null };
+		started.current = true;
+		const opened = openNewStrategy({ ...planFromTyped(typed), ruleset: 'both' });
+		if (!opened.ok) started.current = false;
+		return opened;
+	}, []);
 }
 
 export function LandingScreen() {
 	const heroInput = useRef<HTMLInputElement>(null);
+	const start = useStartOnce();
 	return (
 		<div className="page landing">
 			<header className="header app-header landing-bar">
@@ -54,11 +65,11 @@ export function LandingScreen() {
 				</div>
 			</header>
 			<main className="landing-main">
-				<Hero inputRef={heroInput} />
+				<Hero inputRef={heroInput} start={start} />
 				<LinesSection />
 				<CompareSection />
 				<ShareSection />
-				<CloseSection />
+				<CloseSection start={start} />
 				<footer className="landing-foot">
 					<span className="wordmark">Arbor</span>
 					<span>{EXAMPLES_NOTE}</span>
@@ -68,8 +79,15 @@ export function LandingScreen() {
 	);
 }
 
-function Hero({ inputRef }: { inputRef: RefObject<HTMLInputElement> }) {
-	const captionId = useId();
+function Hero({ inputRef, start }: { inputRef: RefObject<HTMLInputElement>; start: Start }) {
+	const descriptionId = useId();
+	const [typed, setTyped] = useState('');
+	const [failed, setFailed] = useState<string | null>(null);
+	const rootName = heroStart(typed).name;
+	const startYours = () => {
+		const opened = start(typed);
+		setFailed(opened.ok ? null : opened.error);
+	};
 	return (
 		<section className="hero" aria-labelledby="landing-title">
 			<div className="hero-copy">
@@ -80,30 +98,35 @@ function Hero({ inputRef }: { inputRef: RefObject<HTMLInputElement> }) {
 					Map what you do, how he reacts, and what you do next. Then line your plan up against everyone else’s from the
 					same position.
 				</p>
-				<StartField inputRef={inputRef} />
+				<StartField inputRef={inputRef} start={start} onType={setTyped} />
 			</div>
-			<figure className="hero-graph" aria-labelledby={captionId}>
-				<PlanGraph graph={HERO_WIDE} className="wide-only" animated onStartYours />
-				<PlanGraph graph={HERO_TALL} className="tall-only" animated onStartYours />
-				<figcaption id={captionId} className="visually-hidden">
-					Closed guard branching into three plans. Example plan A: break posture; if he postures, scissor sweep; then
-					cross collar choke. Example plan B: hip bump; if he posts, kimura; if he leans in, guillotine. Your plan is
+			<figure className="hero-graph" aria-describedby={descriptionId}>
+				<PlanGraph graph={heroGraph('wide', typed)} className="wide-only" animated maxScale={1.1} onStartYours={startYours} />
+				<PlanGraph graph={heroGraph('tall', typed)} className="tall-only" animated maxScale={1.1} onStartYours={startYours} />
+				{failed && (
+					<p className="error" role="alert">
+						{failed}
+					</p>
+				)}
+				<figcaption className="examples-note">{EXAMPLES_NOTE}</figcaption>
+				<p id={descriptionId} className="visually-hidden">
+					{rootName} branching into three plans. Example plan A: then break posture; if he postures, scissor sweep; then
+					cross collar choke. Example plan B: then hip bump; if he posts, kimura; if he leans in, guillotine. Your plan is
 					still empty.
-				</figcaption>
+				</p>
 			</figure>
-			<p className="examples-note">{EXAMPLES_NOTE}</p>
 		</section>
 	);
 }
 
-function StartField({ inputRef }: { inputRef?: RefObject<HTMLInputElement> }) {
+function StartField({ inputRef, start, onType }: { inputRef?: RefObject<HTMLInputElement>; start: Start; onType?: (typed: string) => void }) {
 	const id = useId();
 	const [typed, setTyped] = useState('');
 	const [error, setError] = useState<string | null>(null);
 
 	function onSubmit(e: FormEvent) {
 		e.preventDefault();
-		const opened = startPlan(planFromTyped(typed));
+		const opened = start(typed);
 		setError(opened.ok ? null : `${opened.error} Allow site storage for this page, then try again.`);
 	}
 
@@ -126,6 +149,7 @@ function StartField({ inputRef }: { inputRef?: RefObject<HTMLInputElement> }) {
 					aria-invalid={error ? true : undefined}
 					onChange={(e) => {
 						setTyped(e.target.value);
+						onType?.(e.target.value);
 						setError(null);
 					}}
 				/>
@@ -156,7 +180,8 @@ type GraphProps = {
 	className?: string;
 	animated?: boolean;
 	lit?: string | null;
-	onStartYours?: boolean;
+	maxScale?: number;
+	onStartYours?: () => void;
 };
 
 function edgePath(graph: Graph, from: GraphNode, to: GraphNode): string {
@@ -170,16 +195,18 @@ function edgePath(graph: Graph, from: GraphNode, to: GraphNode): string {
 
 const beat = (n: number) => ({ '--beat': n }) as CSSProperties;
 
-function PlanGraph({ graph, className = '', animated = false, lit = null, onStartYours = false }: GraphProps) {
+function PlanGraph({ graph, className = '', animated = false, lit = null, maxScale = 1, onStartYours }: GraphProps) {
 	const byId = new Map(graph.nodes.map((n) => [n.id, n]));
 	const at = (x: number, y: number) => ({ left: `${(x / graph.width) * 100}%`, top: `${(y / graph.height) * 100}%` });
 	const ends = (e: GraphEdge) => [byId.get(e.from)!, byId.get(e.to)!] as const;
-	const [failed, setFailed] = useState<string | null>(null);
+	const root = graph.nodes.find((n) => n.tone === 'start');
 
 	return (
 		<div
 			className={`plan-graph flow-${graph.flow}${animated ? ' animated' : ''} ${className}`}
-			style={{ aspectRatio: `${graph.width} / ${graph.height}`, maxWidth: graph.width, '--gw': graph.width } as CSSProperties}
+			style={
+				{ aspectRatio: `${graph.width} / ${graph.height}`, maxWidth: graph.width * maxScale, '--gw': graph.width } as CSSProperties
+			}
 		>
 			<svg viewBox={`0 0 ${graph.width} ${graph.height}`} aria-hidden="true" focusable="false">
 				{graph.edges.map((e) => {
@@ -229,11 +256,8 @@ function PlanGraph({ graph, className = '', animated = false, lit = null, onStar
 							type="button"
 							className={classes}
 							style={style}
-							aria-label="Start a closed guard plan"
-							onClick={() => {
-								const opened = startPlan(planFromTyped('Closed guard'));
-								if (!opened.ok) setFailed(opened.error);
-							}}
+							aria-label={`${n.name}: start a ${inSentence(root?.name ?? '')} plan`}
+							onClick={onStartYours}
 						>
 							<PlusIcon size={14} />
 							{n.name}
@@ -248,11 +272,6 @@ function PlanGraph({ graph, className = '', animated = false, lit = null, onStar
 					</div>
 				);
 			})}
-			{failed && (
-				<p className="graph-error error" role="alert">
-					{failed}
-				</p>
-			)}
 		</div>
 	);
 }
@@ -267,6 +286,7 @@ function nodeNamed(doc: StrategyDoc, name: string): string {
 function LinesSection() {
 	const [lit, setLit] = useState(() => nodeNamed(EXAMPLE_A, 'Scissor sweep'));
 	const outline = toOutline(EXAMPLE_A);
+	const captionId = useId();
 
 	function rows(step: OutlineStep, depth: number) {
 		const isLit = step.node === lit;
@@ -300,13 +320,13 @@ function LinesSection() {
 				</p>
 			</div>
 			<div className="lines-demo">
-				<nav className="lines landing-lines" aria-label="Lines of Example plan A">
-					<div className="lines-head">
-						<h3>Lines</h3>
+				<figure className="lines landing-lines" aria-labelledby={captionId}>
+					<figcaption id={captionId} className="lines-head">
+						<span className="lines-title">Lines</span>
 						<span className="muted">Example plan A</span>
-					</div>
+					</figcaption>
 					<ul>{rows(outline.start, 0)}</ul>
-				</nav>
+				</figure>
 				<PlanGraph graph={LINES_GRAPH} className="demo-graph" lit={lit} />
 			</div>
 		</section>
@@ -349,16 +369,17 @@ function CompareSection() {
 		<section className="landing-section compare-section" aria-labelledby="compare-title">
 			<div className="section-copy">
 				<h2 id="compare-title">Compare plans from the same position</h2>
-				<p>
-					Explore groups published plans by where they start. Open the closed guard shelf and see how other people answer
-					the same reactions.
-					{cloud && (
-						<>
-							{' '}
-							<a href={exploreHref}>Open Explore</a>
-						</>
-					)}
-				</p>
+				{cloud ? (
+					<p>
+						Explore groups published plans by where they start. Open the closed guard shelf and see how other people
+						answer the same reactions. <a href={exploreHref}>Open Explore</a>
+					</p>
+				) : (
+					<p>
+						Plans are grouped by where they start, so plans from the same position sit side by side and you can see how
+						each one answers the same reactions.
+					</p>
+				)}
 			</div>
 			<div className="shelf-demo">
 				<div className="shelf-head">
@@ -380,10 +401,17 @@ function ShareSection() {
 		<section className="landing-section share-section" aria-labelledby="share-title">
 			<div className="section-copy">
 				<h2 id="share-title">Publish a link. Fork someone else’s plan.</h2>
-				<p>
-					Anyone can open a published plan by its link, no account needed. Sign in to publish yours, or to fork a plan
-					and add the branches your game needs.
-				</p>
+				{cloud ? (
+					<p>
+						Anyone can open a published plan by its link, no account needed. Sign in to publish yours, or to fork a plan
+						and add the branches your game needs.
+					</p>
+				) : (
+					<p>
+						A forked plan keeps the original’s lines and lets you add the branches your game needs. Publishing and forking
+						aren’t available here right now; your plans still save in this browser.
+					</p>
+				)}
 				<ul className="fork-key">
 					<li>
 						<span className="key-line" aria-hidden="true" />
@@ -408,12 +436,12 @@ function ShareSection() {
 
 const QUICK_STARTS: PositionId[] = ['closed-guard', 'half-guard', 'butterfly-guard', 'standing', 'side-control', 'mount'];
 
-function CloseSection() {
+function CloseSection({ start }: { start: Start }) {
 	const [error, setError] = useState<string | null>(null);
 	return (
 		<section className="landing-section close-section" aria-labelledby="close-title">
 			<h2 id="close-title">Where does your plan start?</h2>
-			<StartField />
+			<StartField start={start} />
 			<div className="chips" role="group" aria-label="Start from a common position">
 				{QUICK_STARTS.map((id) => {
 					const name = positionName({ kind: 'listed', id });
@@ -423,8 +451,8 @@ function CloseSection() {
 							type="button"
 							className="chip"
 							onClick={() => {
-								const opened = startPlan(planFromTyped(name));
-								if (!opened.ok) setError(opened.error);
+								const opened = start(name);
+								setError(opened.ok ? null : opened.error);
 							}}
 						>
 							{name}
