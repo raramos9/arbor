@@ -8,6 +8,8 @@ import {
 	FORK_ADDED,
 	heroGraph,
 	heroStart,
+	heroTyped,
+	withArticle,
 	homeVisit,
 	inSentence,
 	planFromTyped,
@@ -102,6 +104,19 @@ describe('hero graph', () => {
 		expect(heroStart('mount')).toEqual({ name: 'Mount', side: 'top' });
 		expect(heroStart('Crucifix')).toEqual({ name: 'Crucifix', side: 'bottom' });
 		expect(heroGraph('wide', 'half guard').nodes.find((n) => n.tone === 'start')?.name).toBe('Half guard');
+	});
+
+	it('starts the hero branch from the position the graph shows', () => {
+		const blank = planFromTyped(heroTyped('  '));
+		expect(blank.position).toEqual({ kind: 'listed', id: 'closed-guard' });
+		expect(blank.title).toBe('Closed guard game plan');
+		expect(heroTyped('mount')).toBe('mount');
+	});
+
+	it('picks the article from the sound of the first letter', () => {
+		expect(withArticle('x-guard')).toBe('an x-guard');
+		expect(withArticle('open guard')).toBe('an open guard');
+		expect(withArticle('closed guard')).toBe('a closed guard');
 	});
 
 	it('draws each lane with the grammar of its example doc', () => {
