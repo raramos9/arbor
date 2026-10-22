@@ -1,5 +1,5 @@
 begin;
-select plan(13);
+select plan(14);
 
 insert into auth.users (id, email) values
 	('00000000-0000-0000-0000-00000000000a', 'a@example.com'),
@@ -81,10 +81,19 @@ select is(
 	'another user cannot change the handle'
 );
 
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000b');
+
+select is((select count(*)::int from public.published_strategies), 1, 'a signed-in user reads another user''s published strategy');
+
 select set_config('role', 'anon', true);
 select set_config('request.jwt.claims', '{"role": "anon"}', true);
 
-select is((select count(*)::int from public.published_strategies), 1, 'anonymous visitors read published strategies');
+select throws_ok(
+	$$ select count(*) from public.published_strategies $$,
+	'42501',
+	null,
+	'anonymous visitors cannot read published strategies'
+);
 select is((select count(*)::int from public.profiles), 2, 'anonymous visitors read profiles');
 
 select throws_ok(
