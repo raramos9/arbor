@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useId, useState, type FormEvent } from 'react';
 import {
 	canonicalPosition,
 	otherChoice,
@@ -28,6 +28,14 @@ export function openNewStrategy(args: Parameters<typeof createStrategy>[0]): Res
 	return saved;
 }
 
+export function createHint(title: string, position: Position | null): string | null {
+	const untitled = title.trim() === '';
+	if (untitled && !position) return 'Name the plan and its position to create it.';
+	if (untitled) return 'Name the plan to create it.';
+	if (!position) return 'Name the position to create it.';
+	return null;
+}
+
 export function NewStrategyDialog({ initial, onClose }: { initial: PositionId; onClose: () => void }) {
 	const [choice, setChoice] = useState<PositionId | typeof OTHER>(initial);
 	const [otherName, setOtherName] = useState('');
@@ -48,7 +56,8 @@ export function NewStrategyDialog({ initial, onClose }: { initial: PositionId; o
 	// Until the user types a title, it follows the chosen position so Create is ready once one is picked.
 	const suggestedTitle = position ? `${positionName(position)} game plan` : '';
 	const title = typedTitle ?? suggestedTitle;
-	const valid = title.trim() !== '' && position !== null;
+	const hint = createHint(title, position);
+	const hintId = useId();
 
 	function choose(next: PositionId | typeof OTHER) {
 		setChoice(next);
@@ -62,7 +71,7 @@ export function NewStrategyDialog({ initial, onClose }: { initial: PositionId; o
 
 	function onSubmit(e: FormEvent) {
 		e.preventDefault();
-		if (!valid || !position) return;
+		if (hint || !position) return;
 		const opened = openNewStrategy({ title: title.trim(), position, ruleset, startingSide: startSide });
 		if (opened.ok) onClose();
 		else setError(opened.error);
@@ -78,6 +87,7 @@ export function NewStrategyDialog({ initial, onClose }: { initial: PositionId; o
 						value={title}
 						placeholder="Name this game plan"
 						data-autofocus=""
+						aria-describedby={hint ? hintId : undefined}
 						onFocus={(e) => {
 							if (typedTitle === null) e.target.select();
 						}}
@@ -157,11 +167,15 @@ export function NewStrategyDialog({ initial, onClose }: { initial: PositionId; o
 				</div>
 				{error && <p className="error">{error}</p>}
 				<div className="row">
-					{!valid && position === null && <p className="muted hint">Name the position to create it.</p>}
+					{hint && (
+						<p id={hintId} className="muted hint">
+							{hint}
+						</p>
+					)}
 					<button type="button" onClick={onClose}>
 						Cancel
 					</button>
-					<button type="submit" className="primary" disabled={!valid}>
+					<button type="submit" className="primary" disabled={hint !== null} aria-describedby={hint ? hintId : undefined}>
 						Create strategy
 					</button>
 				</div>
