@@ -393,8 +393,8 @@ function ShareSection() {
 				<h2 id="share-title">{cloud ? 'Publish a link. Fork someone else’s plan.' : 'Your plans stay in this browser.'}</h2>
 				{cloud ? (
 					<p>
-						Anyone can open a published plan by its link, no account needed. Sign in to publish yours, or to fork a plan
-						and add the branches your game needs.
+						Share your plan by its link. Signed-in members can open it, and fork it to add the branches their game needs.
+						Sign in to publish yours.
 					</p>
 				) : (
 					<p>

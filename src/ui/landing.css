@@ -12,6 +12,7 @@
 .landing-bar button.primary { height: 36px; padding: 0 16px; font-weight: 600; }
 
 .landing-main {
+  position: relative;
   flex: 1;
   overflow-y: auto;
   overflow-x: clip;
